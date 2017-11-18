@@ -72,7 +72,6 @@ class Login {
         $IdDataBase = filter_input(INPUT_POST, "IdDataBase");
 
 //        $idSession = Session::getIdSession();
-//        var_dump($idSession);
         $ResultSelect = null;
 
         if (strlen($user) > 0)
@@ -99,19 +98,16 @@ class Login {
 
         $Resultado['idDataBase'] = $IdDataBase;
         $permissionsArray = array();
-        if ((int) $Resultado['IdUsuario'] > 0 and file_exists("$RoutFile/Estructuras/$DataBaseName")) {            
-            
-            Session::$idSession = Session::createSession($IdDataBase, $DataBaseName, $Resultado['IdUsuario'], $Resultado['Login'], $Resultado['IdGrupo'], $Resultado['Nombre']);
-            
-            require_once 'Permissions.php';
 
-            $permissions = new Permissions();
-            $permissionsArray = $permissions->getAllUserPermissionsArray($_SESSION);
+        Session::$idSession = Session::createSession($IdDataBase, $DataBaseName, $Resultado['IdUsuario'], $Resultado['Login'], $Resultado['IdGrupo'], $Resultado['Nombre']);
+            
+        require_once 'Permissions.php';
 
-            Session::setPermissions($permissionsArray);
-            Session::$idSession = Session::getIdSession();
-        } else
-            Session::$idSession = null;
+        $permissions = new Permissions();
+        $permissionsArray = $permissions->getAllUserPermissionsArray($_SESSION);
+
+        Session::setPermissions($permissionsArray);
+        Session::$idSession = Session::getIdSession();
 
         $this->loginResponse($Resultado, $permissionsArray);
     }
