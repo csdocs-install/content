@@ -97,14 +97,13 @@ class Login {
 
 
         $Resultado['idDataBase'] = $IdDataBase;
-        $permissionsArray = array();
 
         Session::$idSession = Session::createSession($IdDataBase, $DataBaseName, $Resultado['IdUsuario'], $Resultado['Login'], $Resultado['IdGrupo'], $Resultado['Nombre']);
             
         require_once 'Permissions.php';
 
         $permissions = new Permissions();
-        $permissionsArray = $permissions->getAllUserPermissionsArray($_SESSION);
+        $permissionsArray = ((int)$IdDataBase > 0) ? $permissions->getAllUserPermissionsArray($_SESSION) : array();
 
         Session::setPermissions($permissionsArray);
         Session::$idSession = Session::getIdSession();
