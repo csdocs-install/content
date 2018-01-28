@@ -423,7 +423,7 @@ class Permissions {
         $selectResult = $this->db->ConsultaSelect($instanceName, $select);
         
         if($selectResult['Estado'] != 1)
-            return XML::XMLReponse ("Error", 0, "<p></b>Error</b> lllllllal obtener los permisos del usuario</p> Detalles:<br>".$selectResult['Estado']);
+            return XML::XMLReponse ("Error", 0, "<p></b>Error</b> al obtener los permisos del usuario</p> Detalles:<br>".$selectResult['Estado']);
         
         return $selectResult['ArrayDatos'];
     }
