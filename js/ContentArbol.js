@@ -338,7 +338,7 @@ function CM_getTree()
             $('#contentTree').dynatree("destroy");
             $('#contentTree').empty();
         }
-        
+
         $(tree).find("Directory").each(function(){
            var $Directory = $(this);
            var id = $Directory.find("IdDirectory").text();
@@ -356,7 +356,7 @@ function CM_getTree()
                InitDynatree(child);
            else{ 
                 var parent = $("#contentTree").dynatree('getTree').getNodeByKey(idParent);
-                if(typeof parent === 'object')
+                if(typeof parent === 'object' && parent !== null)
                     parent.addChild(child);
            }
 
