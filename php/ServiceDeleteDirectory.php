@@ -79,9 +79,17 @@ class ServiceDeleteDirectory {
         }
         
         
-        if(!file_exists($PathAdvancing)){ $XML->ResponseXML("NotFound", 0, "<p>No se encontró el archivo de progreso</p>"); return 0; }
-        
-        if(!($Progress=parse_ini_file ($PathAdvancing,true))){$XML->ResponseXML("Error", 0, "<p>No fué posible abrir el archivo de progreso. </p>"); return 0;}
+        if(!file_exists($PathAdvancing)){
+            $XML->ResponseXML("NotFound", 0, "<p>No se encontró el archivo de progreso</p>");
+            return 0;
+        }
+
+        $Progress = parse_ini_file ($PathAdvancing,true);
+
+        if(!is_array($Progress)){
+            $XML->ResponseXML("Error", 0, "<p>No fué posible abrir el archivo de progreso. </p>");
+            return 0;
+        }
                         
         $doc  = new DOMDocument('1.0','utf-8');
         libxml_use_internal_errors(true);

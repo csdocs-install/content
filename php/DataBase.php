@@ -29,8 +29,8 @@ class DataBase {
         $Password = $Conexion['Conexion']['Password'];
         $Host = $Conexion['Conexion']['Host'];
         error_reporting(E_ALL ^ E_DEPRECATED);
-        $enlace = mysql_connect($Host, $User, $Password);
-        mysql_set_charset('utf8');
+        $enlace = mysqli_connect($Host, $User, $Password);
+        mysqli_set_charset($enlace, 'utf8');
         return $enlace;
     }
 
@@ -934,23 +934,23 @@ class DataBase {
         $conexion = $this->Conexion();
 
         if (!$conexion) {
-            $estado = mysql_error();
+            $estado = mysqli_error($conexion);
             return $estado;
         }
         $rootPass = md5("root");
         $sql = "SELECT *FROM Usuarios WHERE Login='$rootPass'";
 
-        mysql_select_db("cs-docs", $conexion);
-        $resultado = mysql_query($sql, $conexion);
+        mysqli_select_db($conexion,"cs-docs");
+        $resultado = mysqli_query($conexion, $sql);
 
         if (!$resultado) {
-            $estado = mysql_error();
-            mysql_close($conexion);
+            $estado = mysqli_error($conexion). "<br> ".  mysqli_errno($conexion);
+            mysqli_close($conexion);
             return $estado;
         } else
-            $Resultado = mysql_fetch_array($resultado);
+            $Resultado = mysqli_fetch_array($resultado);
 
-        mysql_close($conexion);
+        mysqli_close($conexion);
 
         $PesoRoot = $Resultado;
 
@@ -969,17 +969,17 @@ class DataBase {
         $estado = false;
         $conexion = $this->Conexion();
         if (!$conexion) {
-            $estado = mysql_error();
+            $estado = mysqli_error($conexion);
             return $estado;
         }
         $rootPass = md5("root");
         $sql = "INSERT INTO Usuarios (IdUsuario, Login, Password) VALUES(1,'root','$rootPass')";
-        mysql_select_db("cs-docs", $conexion);
-        $resultado = mysql_query($sql, $conexion);
+        mysqli_select_db($conexion, "cs-docs");
+        $resultado = mysqli_query($conexion, $sql);
         if (!$resultado) {
             
         }
-        mysql_close($conexion);
+        mysqli_close($conexion);
 
         return $estado;
     }
@@ -988,10 +988,10 @@ class DataBase {
         $estado = TRUE;
         $conexion = $this->Conexion();
         if (!$conexion) {
-            $estado = mysql_error();
+            $estado = mysqli_error($conexion)." <br> ".  mysqli_errno($conexion);
             return $estado;
         }
-        mysql_select_db($DataBAse, $conexion);
+        mysqli_select_db($conexion, $DataBAse);
         $TablaPermisos = "CREATE TABLE IF NOT EXISTS Permisos"
                 . "(IdPermiso INT(11) NOT NULL AUTO_INCREMENT,"
                 . "ClavePermiso VARCHAR(10) NOT NULL,"
@@ -1002,19 +1002,19 @@ class DataBase {
                 . "PRIMARY KEY(IdPermiso)"
                 . ")";
 
-        $estado = (mysql_query($TablaPermisos)) ? 1 : "<p>Error al crear la tabla Permisos</p>";
+        $estado = (mysqli_query($conexion, $TablaPermisos)) ? 1 : "<p>Error al crear la tabla Permisos</p>";
         if ($estado != 1) {
-            echo mysql_error();
+            echo mysqli_error($conexion). "<br> ".  mysqli_errno($conexion);
             return;
         }
         $Insert = "INSERT INTO Permisos (IdPermiso,ClavePermiso,Lectura, Escritura, LecturaEscritura,Ejecucion) VALUES (1,'0',0,0,0,0),(2,'r',1,0,0,0),(3,'w',0,1,0,0),(4,'rw',1,1,1,0),(5,'rwx',1,1,1,1)";
-        $estado = (mysql_query($Insert)) ? 1 : "<p>Error al llenar la tabla Permisos</p>" . mysql_error() . mysql_close($conexion);
+        $estado = (mysqli_query($conexion, $Insert)) ? 1 : "<p>Error al llenar la tabla Permisos</p>" . mysqli_error($conexion) . mysqli_close($conexion);
         if ($estado != 1) {
-            echo mysql_error();
+            echo mysqli_error($conexion);
             return;
         }
 
-//        mysql_close($conexion);
+//        mysqli_close($conexion);
 
         return $estado;
     }
@@ -1207,20 +1207,20 @@ class DataBase {
         $Resultado = 0;
         $conexion = $this->Conexion();
         if (!$conexion) {
-            $estado = mysql_error();
+            $estado = mysqli_error($conexion);
             return $estado;
         }
 
         $sql = "SELECT $field FROM $Table WHERE $field=$Value";
-        mysql_select_db($DataBaseName, $conexion);
-        $resultado = mysql_query($sql, $conexion);
+        mysqli_select_db($conexion, $conexion);
+        $resultado = mysqli_query($conexion, $sql);
         if (!$resultado) {
-            $estado = mysql_error();
+            $estado = mysqli_error($conexion);
         } else {
-            $Resultado = mysql_fetch_array($resultado);
+            $Resultado = mysqli_fetch_array($resultado);
         }
 
-        mysql_close($conexion);
+        mysqli_close($conexion);
         $PesoRoot = $Resultado;
         if ($PesoRoot == false) {
             $PesoRoot = 0;
@@ -1327,18 +1327,18 @@ class DataBase {
         $estado = true;
         $conexion = $this->Conexion();
         if (!$conexion) {
-            $estado = mysql_error();
+            $estado = mysqli_error($conexion);
 
             return $estado;
         }
 
-        mysql_select_db($bd, $conexion);
-        $insertar = mysql_query($query, $conexion);
+        mysqli_select_db($conexion, $bd);
+        $insertar = mysqli_query($conexion, $query);
         if (!$insertar) {
-            $estado = mysql_error();
+            $estado = mysqli_error($conexion);
             return $estado;
         }
-        mysql_close($conexion);
+        mysqli_close($conexion);
 
         return $estado;
     }
@@ -1347,19 +1347,19 @@ class DataBase {
         $estado = 0;
         $conexion = $this->Conexion();
         if (!$conexion) {
-            $estado = mysql_error();
-
+            $estado = mysqli_connect_error()." <br> ". mysqli_error($conexion)." <br> ".  mysqli_errno($conexion);
+            mysqli_close($conexion);
             return $estado;
         }
 
-        mysql_select_db($bd, $conexion);
-        $insertar = mysql_query($query, $conexion);
+        mysqli_select_db($conexion, $bd);
+        $insertar = mysqli_query($conexion, $query);
         if (!$insertar) {
-            $estado = mysql_error();
+            $estado = mysqli_error($conexion);
             return $estado;
         }
-        $estado = mysql_insert_id($conexion);
-        mysql_close($conexion);
+        $estado = mysqli_insert_id($conexion);
+        mysqli_close($conexion);
 
         return $estado;
     }
@@ -1368,18 +1368,18 @@ class DataBase {
         $estado = true;
         $conexion = $this->Conexion();
         if (!$conexion) {
-            $estado = mysql_error();
+            $estado = mysqli_error($conexion);
 
             return $estado;
         }
 
-        mysql_select_db($bd, $conexion);
-        $insertar = mysql_query($query, $conexion);
+        mysqli_select_db($conexion, $bd);
+        $insertar = mysqli_query($conexion, $query);
         if (!$insertar) {
-            $estado = mysql_error();
+            $estado = mysqli_error($conexion);
             return $estado;
         }
-        mysql_close($conexion);
+        mysqli_close($conexion);
 
         return $estado;
     }
@@ -1399,23 +1399,25 @@ class DataBase {
         $ResultadoConsulta = array();
         $conexion = $this->Conexion();
         if (!$conexion) {
-            $estado = mysql_error();
+            $estado = "Error al conectar mysql. ".mysqli_connect_errno($conexion)." <br> ".  mysqli_connect_error($conexion);
             $error = array("Estado" => $estado, "ArrayDatos" => 0);
             return $error;
         }
 
-        mysql_selectdb($bd, $conexion);
-        $select = mysql_query($query, $conexion);
+        mysqli_select_db($conexion, $bd);
+        $select = mysqli_query($conexion, $query);
+  
         if (!$select) {
-            $estado = mysql_error();
-            $error = array("Estado" => $estado, "ArrayDatos" => 0);
+            $estado = mysqli_error($conexion). " <br> ".  mysqli_errno($conexion);
+            $error = array("Estado" => "Error al consultar datos. ".$estado, "ArrayDatos" => 0);
             return $error;
-        } else {
-            while (($ResultadoConsulta[] = mysql_fetch_assoc($select)) || array_pop($ResultadoConsulta));
+        } else {            
+            while (($ResultadoConsulta[] = mysqli_fetch_assoc($select)) || array_pop($ResultadoConsulta));
+            mysqli_free_result($select);
         }
 
 
-        mysql_close($conexion);
+        mysqli_close($conexion);
 
         $Resultado = array("Estado" => $estado, "ArrayDatos" => $ResultadoConsulta);
         return $Resultado;
@@ -1429,17 +1431,17 @@ class DataBase {
         $estado = true;
         $conexion = $this->Conexion();
         if (!$conexion) {
-            $estado = mysql_error();
+            $estado = mysqli_error($conexion);
             return $estado;
         }
 
-        mysql_selectdb($DataBasaName, $conexion);
-        $select = mysql_query($query, $conexion);
+        mysqli_select_db($conexion, $DataBasaName);
+        $select = mysqli_query($conexion, $query);
         if (!$select) {
-            $estado = mysql_error();
+            $estado = mysqli_error($conexion). " <br> ".  mysqli_errno($conexion);
         }
 
-        mysql_close($conexion);
+        mysqli_close($conexion);
         return $estado;
     }
 

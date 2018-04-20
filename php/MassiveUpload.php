@@ -461,7 +461,12 @@ class MassiveUpload {
      *      PathDestino: Path del directorio donde se van a mover los archivos
      *      PathBase:   Ruta donde se encuentran los archivos a cargar
      */
-    
+    private function clean($string) {
+//        $string = str_replace(' ', '-', $string); // Replaces all spaces with hyphens.
+
+        return preg_replace('/[^A-Za-z0-9\-\.\_\ ]/', '', $string); // Removes special chars.
+    }
+
     private function SearchCoupleFile($ArrayStructureDefault,$EstructuraProperties,$Catalogos,$ArrayArchivos,$idDirectory,$PathBase,$PathDestino, $MassiveUploadSettings)
     {        
         echo "<br>";
@@ -545,7 +550,7 @@ class MassiveUpload {
                 }
                 
                 $renombrado=0;
-                $PathDestinoArchivo=$PathDestino.$NombreArchivo;   /* PDF */
+                $PathDestinoArchivo=$PathDestino.$this->clean($NombreArchivo);   /* PDF */
                 $PathDestinoXml=$PathDestino.$NombrePar;           /* XML */
                 
                 echo "<p> Procesando a ".basename($PathDestinoArchivo) ."</p>";

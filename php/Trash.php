@@ -388,9 +388,15 @@ class Trash {
             return 1;
         }
         
-        if(!file_exists($PathAdvancing)){ $XML->ResponseXML("NotFound", 0, "<p>No se encontró el archivo de progreso</p>"); return 0; }
-        
-        if(!($Progress=parse_ini_file ($PathAdvancing,true))){$XML->ResponseXML("Error", 0, "<p>No fué posible abrir el archivo de progreso. </p>"); return 0;}
+        if(!file_exists($PathAdvancing)) {
+            $XML->ResponseXML("NotFound", 0, "<p>No se encontró el archivo de progreso</p>");
+            return 0;
+        }
+
+        if(!($Progress = parse_ini_file ($PathAdvancing,true))){
+            $XML->ResponseXML("Error", 0, "<p>No fué posible abrir el archivo de progreso. </p>");
+            return 0;
+        }
                         
         $doc  = new DOMDocument('1.0','utf-8');
         libxml_use_internal_errors(true);
@@ -755,7 +761,7 @@ class Trash {
     
     private function RegisterFileAsDeleted($Path,$IdDrectory,$title)
     {        
-        $config=  fopen(dirname($Path)."/Deleted_".  basename($Path), "a+");
+        $config = fopen(dirname($Path)."/Deleted_".  basename($Path), "a+");
         /* Se reescribe la sección [Restored]. Consultar la descripción de esta función. */
         fwrite($config, "$IdDrectory=$title".PHP_EOL);
         fclose($config);
@@ -766,16 +772,41 @@ class Trash {
      *  Únicamente se muestran los directorios padre
      --------------------------------------------------------------------------*/
     private function ListDirectories()
-    {
-        $XML=new XML();
-        $BD= new DataBase();
-        
+    {        
         $DataBaseName=  filter_input(INPUT_POST, "DataBaseName");
         $NombreRepositorio=  filter_input(INPUT_POST, "NombreRepositorio");
         $IdRepositorio=  filter_input(INPUT_POST, "IdRepositorio");
         $IdUsuario=filter_input(INPUT_POST, "IdUsuario");
-        $NombreUsuario=  filter_input(INPUT_POST, "nombre_usuario");
+        $NombreUsuario=  filter_input(INPUT_POST, "nombre_usuario"); 
         
+        $ResultadoConsulta = $this->getDirectoriesQuery($DataBaseName, $NombreRepositorio, $IdUsuario, $NombreUsuario);
+ 
+        $doc  = new DOMDocument('1.0','utf-8');
+        libxml_use_internal_errors(true);
+        $doc->formatOutput = true;
+        $root = $doc->createElement("Directories");
+        $doc->appendChild($root); 
+        for($cont = 0; $cont < count($ResultadoConsulta); $cont++){
+            $Directory = $doc->createElement("Directory");            
+            
+            $IdParent = $doc->createElement("IdParent", $ResultadoConsulta[$cont][0]);
+            $Directory->appendChild($IdParent);
+            
+            $IdDirectory = $doc->createElement("IdDirectory",$ResultadoConsulta[$cont][1]);
+            $Directory->appendChild($IdDirectory);
+            
+            $title = $doc->createElement("title",$ResultadoConsulta[$cont][2]);
+            $Directory->appendChild($title);
+            
+            $root->appendChild($Directory);                        
+        }                
+        header ("Content-Type:text/xml");
+        echo $doc->saveXML();    
+        
+    }
+    
+    private function getDirectoriesQuery($DataBaseName, $NombreRepositorio, $IdUsuario, $NombreUsuario){
+        $BD= new DataBase();
         $QueryDirectoriesTrashed= 
         "SELECT  dir_$NombreRepositorio.IdDirectory, "
         . "temp_dir_$NombreRepositorio.IdDirectory, temp_dir_$NombreRepositorio.title, temp_dir_$NombreRepositorio.IdUsuario,"
@@ -794,51 +825,22 @@ class Trash {
             . "FROM temp_dir_$NombreRepositorio temp_dir_$NombreRepositorio LEFT JOIN dir_$NombreRepositorio dir_$NombreRepositorio "
             . "ON dir_$NombreRepositorio.IdDirectory = temp_dir_$NombreRepositorio.parent_id "
             . "  WHERE temp_dir_$NombreRepositorio.FlagFather = 1";
-        }
+        }         
         
-        
-        
-        $ResultadoConsulta=array();
-        $conexion=  $BD->Conexion();
-        if (!$conexion) {
-            $estado= mysql_error();
-            $XML->ResponseXML("Error", 0, $estado);
-            return 0;
-        }
+        $conexion = $BD->Conexion();
+        if (!$conexion) 
+            return XML::XMLReponse("Error", 0, mysqli_errno ($conexion). "<br>" . mysqli_error($conexion));
 
-        mysql_selectdb($DataBaseName, $conexion);
-        $select=mysql_query($QueryDirectoriesTrashed,  $conexion);
+        mysqli_select_db($conexion, $DataBaseName);
+        $select = mysqli_query($conexion, $QueryDirectoriesTrashed);
         
-        if(!$select){$estado= mysql_error(); $XML->ResponseXML("Error", 0, $estado);return 0;
-            }else{while(($ResultadoConsulta[] = mysql_fetch_row($select)) || array_pop($ResultadoConsulta)); }        
+        if(!$select)
+            return XML::XMLReponse("Error", 0, mysqli_errno ($conexion). "<br>" . mysqli_error($conexion));
         
-        mysql_close($conexion);
+        while(($ResultadoConsulta[] = mysqli_fetch_row($select)) || array_pop($ResultadoConsulta));     
         
-        
-        
-        $doc  = new DOMDocument('1.0','utf-8');
-        libxml_use_internal_errors(true);
-        $doc->formatOutput = true;
-        $root = $doc->createElement("Directories");
-        $doc->appendChild($root); 
-        for($cont = 0; $cont < count($ResultadoConsulta); $cont++)
-        {
-            $Directory = $doc->createElement("Directory");            
-            
-            $IdParent = $doc->createElement("IdParent", $ResultadoConsulta[$cont][0]);
-            $Directory->appendChild($IdParent);
-            
-            $IdDirectory = $doc->createElement("IdDirectory",$ResultadoConsulta[$cont][1]);
-            $Directory->appendChild($IdDirectory);
-            
-            $title = $doc->createElement("title",$ResultadoConsulta[$cont][2]);
-            $Directory->appendChild($title);
-            
-            $root->appendChild($Directory);                        
-        }                
-        header ("Content-Type:text/xml");
-        echo $doc->saveXML();    
-        
+        mysqli_close($conexion);
+        return $ResultadoConsulta;
     }
     /*--------------------------------------------------------------------------
      *  Devuelve el listado de documentos que se encuentran en la tabla temporal
@@ -872,11 +874,9 @@ class Trash {
         
     }
     
-    private function RestoreFiles()
-    {
+    private function RestoreFiles(){
+        $RoutFile = dirname(getcwd());    
         $XmlRestore = filter_input(INPUT_POST, 'XmlRestore');
-        $XML=new XML();
-        $BD= new DataBase();
         $Fifo = new Fifo();
         
         $DataBaseName=  filter_input(INPUT_POST, "DataBaseName");
@@ -886,18 +886,23 @@ class Trash {
         $NombreUsuario=  filter_input(INPUT_POST, "nombre_usuario");                                        
         /* Se registra el proceso en Fifo y se crea el archivo con los elementos a borrar en 
          * RestoreTrash/DataBaseName/User/ */
-        $RutaFilesTrash="/volume1/web/Configuracion/RestoreTrash/$DataBaseName/$NombreUsuario";       
+        $RutaFilesTrash="$RoutFile/Configuracion/RestoreTrash/$DataBaseName/$NombreUsuario";       
         
-        if(!file_exists($RutaFilesTrash)){if(!mkdir($RutaFilesTrash, 0777, true)){$XML->ResponseXML("Error", 0, "No se pudo crear el directorio <b>RestoreTrash</p>"); return 0;}}
+        if(!file_exists($RutaFilesTrash))
+            if(!mkdir($RutaFilesTrash, 0777, true))
+                return XML::XMLReponse("Error", 0, "No se pudo crear el directorio <b>RestoreTrash</p>"); 
         
         $archivo="$RutaFilesTrash/RestoreFiles.ini";
         
-        if(file_exists($archivo)){if(!unlink($archivo)){$XML->ResponseXML("Error", 0, "No se pudo eliminar el archivo de restauración anterior."); return 0;}}
+        if(file_exists($archivo))
+            if(!unlink($archivo))
+                return XML::XMLReponse("Error", 0, "No se pudo eliminar el archivo de restauración anterior.");                
         
-        $xml=  simplexml_load_string($XmlRestore);      
+        $xml = simplexml_load_string($XmlRestore);      
+        $config = fopen($archivo, "a+");
         
-        $config=  fopen($archivo, "a+");
-        if(!($config)){$XML->ResponseXML("Error", 0, "Error al crear archivo de configuración."); return;}  /* Error al abrir y crear el archivo de config */                                                        
+        if(!($config))
+            return XML::XMLReponse("Error", 0, "Error al crear archivo de configuración."); /* Error al abrir y crear el archivo de config */                
         
         fwrite($config, "; Listado de documentos a restaurar. ".PHP_EOL);
         fwrite($config, "[RestoreFiles]".PHP_EOL);
@@ -908,36 +913,39 @@ class Trash {
         fwrite($config, "IdUsuario = $IdUsuario".PHP_EOL);   
         fwrite($config, "[Files]".PHP_EOL);
         /* Se registran los directorios padre del árbol a restaurar */        
-        foreach ($xml->File as $nodo)
-        {
+        foreach ($xml->File as $nodo){
             fwrite($config, "$nodo->NombreArchivo=$nodo->IdRepositorio".PHP_EOL);
         }
+        
         fclose($config);
         
         /* Se registra el proceso  */        
         $KeyProcess=$Fifo->AddToStack("RestoreFiles", $NombreUsuario, $archivo);
         
-        if(!$KeyProcess){$XML->ResponseXML("Error", 0, "No pudo ser registrado el proceso en Fifo"); return 0;}
+        if(!$KeyProcess)
+            return XML::XMLReponse("Error", 0, "No pudo ser registrado el proceso en Fifo");
         
         $StartProcess=$Fifo->StartProcess($KeyProcess);
         
-        if($StartProcess==0){$XML->ResponseXML("Error", 0, "No pudo inicializarse el proceso de borrado del directorio"); return 0;}
+        if($StartProcess==0)
+            return XML::XMLReponse("Error", 0, "No pudo inicializarse el proceso de borrado del directorio"); 
         
         rename($archivo, dirname($archivo)."/$KeyProcess.ini");
         
         $RouteFileStatus=dirname($archivo)."/Status_$KeyProcess.ini";
         $RouteFileAdvancing=dirname($archivo)."/Advancing_$KeyProcess.ini";
 
-        
         /* Archivo de status del servicio (Permite deter el servicio ) */
-        if(!($FileProgress=fopen($RouteFileAdvancing, "a+"))){   echo "Error al crear archivo de Progress_$KeyProcess. ".$FileProgress.PHP_EOL;  return 0;}
+        if(!($FileProgress=fopen($RouteFileAdvancing, "a+"))){
+            echo "Error al crear archivo de Progress_$KeyProcess. ".$FileProgress.PHP_EOL;  
+            return 0;            
+        }
+        
         fwrite($FileProgress, "[Progress]".PHP_EOL);
         fwrite($FileProgress, "TotalFiles=Calculando...".PHP_EOL);
         fclose($FileProgress);
         
-        
         /* Archivo de Progreso de la restauración */
-        
         if(!($FileStatus=fopen($RouteFileStatus, "a+"))){   echo "Error al crear archivo de Status_$KeyProcess. ".$FileStatus.PHP_EOL;  return 0;}
         fwrite($FileStatus, "status=1");
         fclose($FileStatus);

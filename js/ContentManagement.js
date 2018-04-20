@@ -36,7 +36,7 @@ var ContentMnagement = function () {
         var content = $('<div>', {id: "content_management", class: "content_management"});
 
         var tabs = $('<div>', {}); /* Se le quito la clase */
-        
+
         tabs.append('\
             <ul id = "tabsContent" class = "nav nav-tabs">\n\
                 <li data-target = "#tabs-1" data-toggle = "tab" class="active">\n\
@@ -56,9 +56,9 @@ var ContentMnagement = function () {
         var navbarHeader = $('<div>', {class: "navbar-header"});
 
         var buttonCollapsed = $('<button>', {
-            type: "button", 
+            type: "button",
             class: "navbar-toggle collapsed",
-            "data-toggle": "collapse", 
+            "data-toggle": "collapse",
             "data-target": "#navbarContent",
             "aria-expanded": "false"
         }).append('\n\
@@ -66,7 +66,7 @@ var ContentMnagement = function () {
                 <span class="icon-bar"></span>\n\
                 <span class="icon-bar"></span>\n\
                 <span class="icon-bar"></span>');
-        
+
         divCollapsed.append('<form class = "navbar-form navbar-left" role = "search">\n\
                                 <div class = "form-group">\n\
                                     <i class="fa fa-building fa-lg" style = "color:#1b437d"></i>\n\
@@ -125,10 +125,10 @@ var ContentMnagement = function () {
         var contentTabDiv = $('<div>', {class: "tab-content"});
 
         var contentTree = $('<div>', {
-            id: "contentTreeStructure", 
+            id: "contentTreeStructure",
             class: "col-xs-3 col-sm-3 col-md-3 col-lg-3"
-        }).css({"overflow": "auto", 'max-height': $(window).height()-230}).append('<div id = "contentTree"></div>');
-        
+        }).css({"overflow": "auto", 'max-height': $(window).height() - 230}).append('<div id = "contentTree"></div>');
+
         var contentTab = $('<div>', {id: "tabs-1", class: "tab-pane"});
 
         contentTab.append(nav);
@@ -137,14 +137,14 @@ var ContentMnagement = function () {
         contentTab.append('<div class = "contentDetail contentDocuments col-xs-9 col-sm-9 col-md-9 col-lg-9"></div>');
 
         contentTabDiv.append(contentTab);
-        
+
         /*------------------------ Tab Búsqueda --------------------------- */
-        
+
         nav = $('<nav>', {class: "navbar navbar-custom", role: "navigation"});
         divCollapsed = $('<div>', {class: "collapse navbar-collapse", id: "navbarSearcher"});
         containerFuild = $('<div>', {class: "container-fluid"});
         navbarHeader = $('<div>', {class: "navbar-header"});
-        
+
         buttonCollapsed = $('<button>', {type: "button", class: "navbar-toggle collapsed",
             "data-toggle": "collapse", "data-target": "#navbarSearcher",
             "aria-expanded": "false"}).append('\
@@ -152,14 +152,14 @@ var ContentMnagement = function () {
                 <span class="icon-bar"></span>\n\
                 <span class="icon-bar"></span>\n\
                 <span class="icon-bar"></span>');
-        
+
         navbarHeader.append(buttonCollapsed);
         navbarHeader.append('<a class="navbar-brand" href="#"><i class="fa fa-search fa-lg"></i></a>');
         containerFuild.append(navbarHeader);
-        
+
         divCollapsed.append('<ul class="nav navbar-nav navbar-right">\n\
                                         <li id="userPage">\n\
-                                            <a href="#@userpage"><i class="icon-user"></i> <input type = "checkbox"> Expediente</a>\n\
+                                            <a href="#"><i class="icon-user"></i> <input type = "checkbox" id="advanceSearch"> Búsqueda avanzada</a>\n\
                                         </li>\n\
                                     </ul>\n\
                                     <form class="navbar-form">\n\
@@ -169,15 +169,22 @@ var ContentMnagement = function () {
                                                 <input class="form-control" id = "form_engine" placeholder="Realizar búsqueda" autocomplete="off" autofocus="autofocus" type="text">\n\
                                             </div>\n\
                                         </div>\n\
-                                    </form>');       
+                                    </form>');
 
         containerFuild.append(divCollapsed);
 
         nav.append(containerFuild);
-        
-        
+
+
         var engineTab = $('<div>', {id: "tabs-2", class: "tab-pane"}).append(nav);
         engineTab.append('<div class="contentDetailEngine col-xs-12 col-sm-12 col-md-12 col-lg-12"></div>');
+        engineTab.append('\
+            <div id="advanceSearchContainer" class="col-xs-12 col-sm-12 col-md-12 col-lg-12"  style="display:none">\n\
+                <div id="controlsAdvanceSearchContainer">\n\
+                        <select id="searchAdvanceFields"></select>\n\
+                </div>\n\
+            </div>\n\
+        ');
 
         contentTabDiv.append(engineTab);
 
@@ -192,7 +199,7 @@ var ContentMnagement = function () {
 
     var _initContentInterface = function () {
         var contentArbol = new ContentArbol();
-        
+        var advancedSearch = new AdvancedSearch();
         $('#content_management').dialog(WindowContentManagement, {close: function () {
                 $(this).remove();
             }, resize: function (event, ui) {
@@ -206,7 +213,7 @@ var ContentMnagement = function () {
             if (EnterpriseKey !== "0") {
                 $("#CM_select_repositorios option").remove();
                 $("#CM_select_repositorios").append("<option value='0'>Seleccione un Repositorio</option>");
-                
+
                 var repository = new ClassRepository();
                 var repositories = repository.GetRepositories(EnterpriseKey);
 
@@ -264,7 +271,7 @@ var ContentMnagement = function () {
         $('.CMPasteFile').unbind('click').on('click', PasteFile);
 
         $('.CMCutFile').unbind('click').on('click', CutFile);
-        
+
         $('.CMDeleteFile').unbind('click').on('click', deleteFileConfirmation);
 
         $('.CMMassiveUpload').unbind('click').click(function () {
@@ -293,6 +300,12 @@ var ContentMnagement = function () {
                 $(this).collapse('hide');
             }
         });
+
+        $('#advanceSearch').unbind("click").on("click", function () {
+             ($(this).is(':checked')) ?  advancedSearch.show() : advancedSearch.hide();
+        });
+        
+        advancedSearch.init();
 
     };
 

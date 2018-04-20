@@ -175,28 +175,28 @@ class Usuarios {
         $estado = true;
         $conexion = $DB->Conexion();
         if (!$conexion) {
-            $estado = mysql_error();
+            $estado = mysqli_error($conexion). "<br>" . mysqli_errno($conexion);
             $error = array("Estado" => $estado, "ArrayDatos" => 0);
             return $error;
         }
 
-        mysql_select_db($DataBaseName, $conexion);
+        mysqli_select_db($conexion, $DataBaseName);
         $query = "";
         if (strcasecmp($DataBaseName, "cs-docs") == 0)
             $query = "SELECT COUNT(*) FROM Usuarios";
         else
             $query = "SELECT COUNT(*) FROM CSDocs_Usuarios";
 
-        $select = mysql_query($query, $conexion);
+        $select = mysqli_query($conexion, $query);
 
         if (!$select) {
-            $estado = mysql_error();
+            $estado = mysqli_error($conexion). "<br>" . mysqli_errno($conexion);
             $error = array("Estado" => $estado, "ArrayDatos" => 0);
             return $error;
         }
 
-        $ResultadoConsulta = mysql_fetch_assoc($select);
-        mysql_close($conexion);
+        $ResultadoConsulta = mysqli_fetch_assoc($select);
+        mysqli_close($conexion);
 
         $Resultado = array("Estado" => $estado, "ArrayDatos" => $ResultadoConsulta);
         return $Resultado;

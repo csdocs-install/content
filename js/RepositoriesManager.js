@@ -239,6 +239,27 @@ var ClassRepository = function ()
 
         return RepositoriesXml;
     };
+    
+    this.getRepositoriesByCompany = function(){
+        var repositories = null;
+        $.ajax({
+            async: false,
+            cache: false,
+            dataType: "xml",
+            type: 'POST',
+            url: "php/Repository.php",
+            data: {opcion: "getRepositoriesByEnterprise"},
+            success: function (response) {
+                repositories = repositories;
+            },
+            beforeSend: function () {},
+            error: function (jqXHR, textStatus, errorThrown) {
+                errorMessage(textStatus + "<br>" + errorThrown);
+            }
+        });
+        
+        return repositories;
+    }
 
     /* Interfaz dedicada a agregar un nuevo repositorio  
      * RM = RepositoriesManager*/
