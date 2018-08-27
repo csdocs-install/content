@@ -220,35 +220,6 @@ class Repository {
         $DefaultStructProperties->FechaIngreso->addAttribute("type", "DATE");
         $DefaultStructProperties->FechaIngreso->addAttribute("required", "true");
 
-        $DefaultStructProperties->addChild('ResumenExtract');
-        $DefaultStructProperties->ResumenExtract->addAttribute("type", "TEXT");
-        $DefaultStructProperties->ResumenExtract->addAttribute("required", "true");
-
-        $DefaultStructProperties->addChild('Autor');
-        $DefaultStructProperties->Autor->addAttribute("type", "VARCHAR");
-        $DefaultStructProperties->Autor->addAttribute("long", "100");
-        $DefaultStructProperties->Autor->addAttribute("required", "true");
-
-        $DefaultStructProperties->addChild('Topografia');
-        $DefaultStructProperties->Topografia->addAttribute("type", "INT");
-        $DefaultStructProperties->Topografia->addAttribute("long", "10");
-        $DefaultStructProperties->Topografia->addAttribute("required", "true");
-
-        $DefaultStructProperties->addChild('Clasificacion');
-        $DefaultStructProperties->Clasificacion->addAttribute("type", "VARCHAR");
-        $DefaultStructProperties->Clasificacion->addAttribute("long", "250");
-        $DefaultStructProperties->Clasificacion->addAttribute("required", "true");
-
-        $DefaultStructProperties->addChild('Gestion');
-        $DefaultStructProperties->Gestion->addAttribute("type", "INT");
-        $DefaultStructProperties->Gestion->addAttribute("long", "10");
-        $DefaultStructProperties->Gestion->addAttribute("required", "true");
-
-        $DefaultStructProperties->addChild('Expediente');
-        $DefaultStructProperties->Expediente->addAttribute("type", "INT");
-        $DefaultStructProperties->Expediente->addAttribute("long", "10");
-        $DefaultStructProperties->Expediente->addAttribute("required", "true");
-
         $DefaultStructProperties->addChild('NombreArchivo');
         $DefaultStructProperties->NombreArchivo->addAttribute("type", "VARCHAR");
         $DefaultStructProperties->NombreArchivo->addAttribute("long", "100");

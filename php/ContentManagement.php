@@ -929,8 +929,7 @@ class ContentManagement {
             return XML::XMLReponse("Error", 0, "Error al Intentar actualar los Datos. ".$ResultUpdate);
     }
     /***************************************************************************
-     *  Se devuelven los campos para ser mostrados en la vista de usuario, los campos
-     * por default para esta versión tales como Topografia, Clasificacion, Gestion, Expediente, ResumenEctract,
+     *  Se devuelven los campos para ser mostrados en la vista de usuario, los campo
      * No se devuelven a la vista.
      */
     private function GetDetalle($userData)
@@ -1044,9 +1043,7 @@ class ContentManagement {
             $CampoDefault=$ArrayStructureDefault[$cont]['name'];
             $CampoOculto=1;
             /* Campos que estan ocultos en la vista del usuario para la versión Lite */
-            if($CampoDefault=='Autor' or $CampoDefault=='ResumenExtract' or $CampoDefault=='Topografia'
-             or $CampoDefault=='Clasificacion' or $CampoDefault=='Gestion' or $CampoDefault=='Expediente'
-             or $CampoDefault=='NombreArchivo' or $CampoDefault=='Full' or $CampoDefault=='RutaArchivo')
+            if($CampoDefault=='NombreArchivo' or $CampoDefault=='Full' or $CampoDefault=='RutaArchivo')
              {
                 $CampoOculto=0;
              }      
@@ -1584,11 +1581,9 @@ class ContentManagement {
         $size=$_FILES['archivo']['size'];
         
         $TipoArchivo_=  explode(".",$name);$ResumenExtrac=0;$Autor=0;$Topografia=0;$Clasificacion=0;
-        $Gestion=0;$Expediente=0;$Full='';
+        $Full='';
         $TipoArchivo=  end($TipoArchivo_);
 
-        
-                       
         $renombrado=0;
                 
         /* Primero se Mueve el archivo a su destino luego se realiza el insert en la BD */ 
@@ -1666,9 +1661,9 @@ class ContentManagement {
             }
         }
         $Full.=" $TipoArchivo";
-                
-        $CadenaCamposDefault=",IdEmpresa,TipoArchivo,RutaArchivo,ResumenExtract,Autor,Topografia,Clasificacion, Gestion, Expediente, FechaIngreso,NombreArchivo,Full";
-        $CadenaValoresDefault=",$IdEmpresa,'$TipoArchivo','$PathDestino$name','$ResumenExtrac','$Autor',$Topografia,'$Clasificacion',$Gestion,$Expediente,'$FechaIngreso','$NombreArchivo','$Full'";
+
+        $CadenaCamposDefault=",IdEmpresa,TipoArchivo,RutaArchivo, FechaIngreso,NombreArchivo,Full";
+        $CadenaValoresDefault=",$IdEmpresa,'$TipoArchivo','$PathDestino$name','$FechaIngreso','$NombreArchivo','$Full'";
         
         $cadenaValores=trim($cadenaValores,',');  /* Quita la última Coma ( , ) */
         $cadenaCampos=trim($cadenaCampos,',');
