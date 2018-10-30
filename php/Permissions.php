@@ -109,9 +109,9 @@ class Permissions {
         if(strlen($IfComeplement_) > 0)
             $IfComeplement_ = " WHERE $IfComeplement_";
         
-        $IfComeplement = trim($IfComeplement_, "AND");        
-        
-        if(strcasecmp($IdUsuario, 1)==0 and strcasecmp($NombreUsuario, "root")==0)
+        $IfComeplement = trim($IfComeplement_, "AND");
+
+        if(strcasecmp($IdUsuario, 1)==0 or strcasecmp($NombreUsuario, "root")==0 or strcasecmp($NombreGrupo, "Administradores") == 0)
             $QueryListPermissions = "SELECT smc.IdMenu, smc.IdGrupo, smc.IdUsuario, smc.IdRepositorio, sm.Nombre "
                                 . "FROM SystemMenuControl smc INNER JOIN SystemMenu sm ON smc.IdMenu = sm.IdMenu "
                                 . "WHERE smc.IdGrupo = 1";  
