@@ -70,7 +70,7 @@ class ContentManagement {
     private function DeleteFile($userData)
     {        
         $designer = new DesignerForms();
-        $Catalog = new Catalog();
+//        $Catalog = new Catalog();
         
         $DataBaseName = $userData['dataBaseName'];
         $NombreRepositorio=  filter_input(INPUT_POST, "NombreRepositorio");
@@ -91,109 +91,32 @@ class ContentManagement {
            
         
         if(!($EstructuraConfig = parse_ini_file ("../Configuracion/$DataBaseName.ini",true)))
-                return XML::XMLReponse ("Error", 0, "<b>Error</b> al abrir el archivo de configuración del repositorio <b>$NombreRepositorio</b><br><br>$EstructuraConfig");
-        
-        $ArrayStructureDefault=$designer->ReturnStructureDefault($NombreRepositorio,$EstructuraConfig[$NombreRepositorio]);        
-        
+            return XML::XMLReponse ("Error", 0, "<b>Error</b> al abrir el archivo de configuración del repositorio <b>$NombreRepositorio</b><br><br>$EstructuraConfig");
+
+        $ArrayStructureDefault=$designer->ReturnStructureDefault($NombreRepositorio,$EstructuraConfig[$NombreRepositorio]);
+
         $Full='';
         
         $GetFile='SELECT *FROM '.$NombreRepositorio." WHERE IdRepositorio=$IdFile";
         
         $File = $this->db->ConsultaSelect($DataBaseName, $GetFile);
-        
-        $delete='INSERT INTO temp_rep_'.$NombreRepositorio." (IdRepositorio,";
-        
-        $cadena_campos='';
-        $cadena_valores=$IdFile.",";
-        
-        /* Estructura del repositorio */
-        $EstructuraRepositorio=$designer->ReturnStructure($NombreRepositorio,$EstructuraConfig[$NombreRepositorio]);
-        
-        $catalogos = $Catalog->getFilteredArrayCatalogsDetail($DataBaseName, $IdRepositorio);   
-        
-        if(!is_array($catalogos))
-            return XML::XMLReponse ("Error", 0, "Error al consultar catálogos del repositorio <b>$NombreRepositorio</b>");
-        
-        /* Campos del repositorio */
-         for($cont=0; $cont<count($EstructuraRepositorio); $cont++)       
-         {
-             $CampoRepositorio=$EstructuraRepositorio[$cont]['name'];
-             $type=$EstructuraRepositorio[$cont]['type'];
-             $cadena_campos.=" ".$CampoRepositorio.",";
 
-            if(strcasecmp($type,"int")==0 or strcasecmp($type,"integer")==0 or strcasecmp($type,"float")==0 or strcasecmp($type,"double")==0) /* Si detecta un tipo numerico */
-            {                 
-                if(!(is_numeric($File['ArrayDatos'][0][$CampoRepositorio])))                
-                    $cadena_valores.=" 0,";                   
-                else
-                    $cadena_valores.=$File['ArrayDatos'][0][$CampoRepositorio].",";
-            }
-            else    /* Demás tipos de datos llevan ' ' */
-                $cadena_valores.="'".$File['ArrayDatos'][0][$CampoRepositorio]."'".",";
-            
-            $Full.=$File['ArrayDatos'][0][$CampoRepositorio]." ";            
-         }   
-         /* Campos de Default */
-
-         for($cont=0; $cont<count($ArrayStructureDefault); $cont++)
-         {
-             
-             $CampoDefault=$ArrayStructureDefault[$cont]['name'];
-             $type=$ArrayStructureDefault[$cont]['type'];
-             $value=$File['ArrayDatos'][0][$CampoDefault];
-
-             if($CampoDefault=='Full'){$Full = $value; continue;}
-             
-//             $Full.=$value." , ";
-             $cadena_campos.=$CampoDefault.",";
-                          
-            if(strcasecmp($type,"int")==0 or strcasecmp($type,"integer")==0 or strcasecmp($type,"float")==0 or strcasecmp($type,"double")==0) /* Si detecta un tipo numerico */
-            {                
-                if(!(is_numeric($value)))             
-                    $cadena_valores.="0,";                   
-                else
-                    $cadena_valores.=$value.",";
-            }
-            else    /* Demás tipos de datos llevan ' ' */
-                $cadena_valores.="'".$value."'".",";         
-         }                              
-         
-         /*  Nombres de Cada catálogo */
-        for($cont=0; $cont<count($catalogos);$cont++)
+        $QueryDeleteFile="UPDATE $NombreRepositorio SET status=0 WHERE idRepositorio=$IdFile";
+        $delete = $this->db->ConsultaQuery($DataBaseName, $QueryDeleteFile);
+        if($delete==1)
         {
-            $NombreCatalogo=$catalogos[$cont]['NombreCatalogo'];
-            $cadena_campos.=$NombreCatalogo.",";
-            $cadena_valores.=$File['ArrayDatos'][0][$NombreCatalogo].",";            
-//            $Full.=$File['ArrayDatos'][0][$NombreCatalogo]." ";
-        }                     
-            /* Se copia el archivo a la ruta especificada por el usuario */
-            $cadena_campos=  trim($cadena_campos,',');
-            $cadena_valores=  trim($cadena_valores,',');
-
-            $delete=$delete.$cadena_campos.",IdDirectory, IdEmpresa,Full) VALUES ($cadena_valores,$IdDirectory,$IdEmpresa,'$Full')";            
-            $DeleteFromRepository="DELETE FROM $NombreRepositorio WHERE IdRepositorio=$IdFile";
-        
-            
-            if(($ResultTempDelete = $this->db->ConsultaInsert($DataBaseName, $delete))==1)/* Se copia delete en tabla temporal */
-            {                 
-                if(($ResultDelete = $this->db->ConsultaQuery($DataBaseName, $DeleteFromRepository))==1)/* Se elimina del repositorio */
-                {    
-                    $DeleteFromGlobal = "UPDATE RepositorioGlobal SET Full = '' WHERE IdFile = $IdFile AND IdRepositorio = $IdRepositorio";
-                    if(($ResultDeleteFromGlobal = $this->db->ConsultaQuery($DataBaseName, $DeleteFromGlobal)==1))
-                    {
-                        Log::WriteEvent("25", $IdUsuario, $NombreUsuario, $File['ArrayDatos'][0]["NombreArchivo"], $DataBaseName);
-                        XML::XMLReponse("DeleteFile", 1, "Archivo Eliminado con éxito.");
-
-                    }                    
-                }
-                else
-                {
-                    $this->db->ConsultaQuery($DataBaseName, "DELETE FROM temp_rep_$NombreRepositorio WHERE IdRepositorio = $IdFile");
-                    return XML::XMLReponse("Error", 0, "Error al eliminar el archivo. ".$ResultDelete);
-                }
-            }  
-            else
-                return XML::XMLReponse("Error", 0, "Error al eliminar el archivo. ".$ResultTempDelete);
+            $QueryDeleteFileGlobal="UPDATE RepositorioGlobal SET status=0 WHERE IdEmpresa=$IdEmpresa AND IdRepositorio=$IdRepositorio AND IdDirectory=$IdDirectory AND idFile=$IdFile";
+            $deleteFileGlobal=$this->db->ConsultaQuery($DataBaseName,$QueryDeleteFileGlobal);
+            if($deleteFileGlobal==1)
+            {
+                Log::WriteEvent("25", $IdUsuario, $NombreUsuario, $File['ArrayDatos'][0]["NombreArchivo"], $DataBaseName);
+                return XML::XMLReponse("DeleteFile", 1, "Archivo Eliminado con éxito.");
+            }else {
+                return XML::XMLReponse("Error", 0, "No fue posible eliminar el archivo.".$deleteFileGlobal);
+            }
+        }else {
+            return XML::XMLReponse("Error", 0, "No fue posible eliminar el archivo.".$delete);
+        }
     }
     
     private function CutFile($userData)
@@ -241,17 +164,17 @@ class ContentManagement {
         /***********************************************************************/
         
         /* Si existe se renombra el archivo nuevo  */
-            $t=1; 
-            $renombrado=0;
-        while(file_exists($RutaDestino.$NombreArchivo)){ 
-             $archivo = $NombreArchivo; 
-             $archivo=substr($archivo,0,strpos($archivo,"."))."_$t".strstr($archivo,".");  
-             $NombreArchivo=$archivo;
-             $t++; 
-             $renombrado=1;
-            } 
-            
-            
+        $t=1;
+        $renombrado=0;
+        while(file_exists($RutaDestino.$NombreArchivo)){
+            $archivo = $NombreArchivo;
+            $archivo=substr($archivo,0,strpos($archivo,"."))."_$t".strstr($archivo,".");
+            $NombreArchivo=$archivo;
+            $t++;
+            $renombrado=1;
+        }
+
+
         /* Los datos que pueden cambiar de un archivo copiado son
          * IdDirectory
          * IdRepositorio (Ya que es consecutivo)
@@ -293,25 +216,25 @@ class ContentManagement {
          }   
          
 
-         /* Se concatenan los campos de los catálogos */
-         for ($cont=0; $cont<count($catalogos); $cont++)
-         {
-             $catalogo=$catalogos[$cont]['NombreCatalogo'];
-             $query.= $NombreRepositorio.".".$catalogo.",";
-             for($aux=1; $aux<count($EstructuraCatalogos[$catalogo]); $aux++)  /* 1 es el tipo */
-             {
-                 $NombreCatalogo=$catalogos[$cont]['NombreCatalogo'];
-                 $query.= $NombreCatalogo.".".$EstructuraCatalogos[$catalogo][$aux]['name'].",";
-             }                   
-             /* substr obtiene el prrefijo de cada tabla pe. Rep.ClaveEmpresa, Rep.NombreArchivo, etct */
-             $InnerJoin.=" LEFT JOIN $NombreRepositorio"."_".$NombreCatalogo." ".$NombreCatalogo ." ON ".$NombreRepositorio.".".$NombreCatalogo."=".  $NombreCatalogo.".Id".$NombreCatalogo;
-         }       
-                           
-         $query=trim($query,',');
-         $InnerJoin=trim($InnerJoin,',');         
-         $query.=' FROM '.$NombreRepositorio." ".$NombreRepositorio;         
-         $query= $query.$InnerJoin." WHERE ".$NombreRepositorio.".IdRepositorio=$IdFile";
-         
+        /* Se concatenan los campos de los catálogos */
+        for ($cont=0; $cont<count($catalogos); $cont++)
+        {
+            $catalogo=$catalogos[$cont]['NombreCatalogo'];
+            $query.= $NombreRepositorio.".".$catalogo.",";
+            for($aux=1; $aux<count($EstructuraCatalogos[$catalogo]); $aux++)  /* 1 es el tipo */
+            {
+                $NombreCatalogo=$catalogos[$cont]['NombreCatalogo'];
+                $query.= $NombreCatalogo.".".$EstructuraCatalogos[$catalogo][$aux]['name'].",";
+            }
+            /* substr obtiene el prrefijo de cada tabla pe. Rep.ClaveEmpresa, Rep.NombreArchivo, etct */
+            $InnerJoin.=" LEFT JOIN $NombreRepositorio"."_".$NombreCatalogo." ".$NombreCatalogo ." ON ".$NombreRepositorio.".".$NombreCatalogo."=".  $NombreCatalogo.".Id".$NombreCatalogo;
+        }
+
+        $query=trim($query,',');
+        $InnerJoin=trim($InnerJoin,',');
+        $query.=' FROM '.$NombreRepositorio." ".$NombreRepositorio;
+        $query= $query.$InnerJoin." WHERE ".$NombreRepositorio.".IdRepositorio=$IdFile";
+
         $File = $this->doDetailQuery($DataBaseName, $query);
         
         if(!is_array($File))
@@ -323,12 +246,12 @@ class ContentManagement {
         /************** - Campos de Default del Repositorio - ******************/
         
         $AuxCont=0;
-         for($cont=0; $cont<count($ArrayStructureDefault); $cont++)
-         {             
-             $CampoDefault=$ArrayStructureDefault[$cont]['name'];
-             $type=$ArrayStructureDefault[$cont]['type'];
-             $value=$File[0][$AuxCont];
-             
+        for($cont=0; $cont<count($ArrayStructureDefault); $cont++)
+        {
+            $CampoDefault=$ArrayStructureDefault[$cont]['name'];
+            $type=$ArrayStructureDefault[$cont]['type'];
+            $value=$File[0][$AuxCont];
+
 //             echo "<p>$CampoDefault = ".$File[0][$AuxCont]." </p>";
              
             $AuxCont++;
@@ -542,17 +465,17 @@ class ContentManagement {
         /***********************************************************************/
         
         /* Si existe se renombra el archivo nuevo  */
-            $t=1; 
-            $renombrado=0;
-        while(file_exists($RutaDestino.$NombreArchivo)){ 
-             $archivo = $NombreArchivo; 
-             $archivo=substr($archivo,0,strpos($archivo,"."))."_$t".strstr($archivo,".");  
-             $NombreArchivo=$archivo;
-             $t++; 
-             $renombrado=1;
-            } 
-            
-            
+        $t=1;
+        $renombrado=0;
+        while(file_exists($RutaDestino.$NombreArchivo)){
+            $archivo = $NombreArchivo;
+            $archivo=substr($archivo,0,strpos($archivo,"."))."_$t".strstr($archivo,".");
+            $NombreArchivo=$archivo;
+            $t++;
+            $renombrado=1;
+        }
+
+
         /* Los datos que pueden cambiar de un archivo copiado son:
          *      IdDirectory
          *      IdRepositorio (Ya que es consecutivo)
@@ -579,40 +502,40 @@ class ContentManagement {
                 
         /* Se genera el Query que realiza la consulta con el detalle del archivo a traves de las estructuras
          * del repositorio y de los catálogos */
-                        
-         /* Campos de default en repositorio */
-         for($cont=0; $cont<count($ArrayStructureDefault); $cont++)
-         {             
-             $CampoDefault=$ArrayStructureDefault[$cont]['name'];
-             $query.=$NombreRepositorio.".".$CampoDefault.",";
-         }
-         
-         /* Campos del repositorio */
-         for($cont=0; $cont<count($EstructuraRepositorio); $cont++)       
-         {
-             $query.= $NombreRepositorio.".".$EstructuraRepositorio[$cont]['name'].",";           
-         }   
-         
 
-         /* Se concatenan los campos de los catálogos */
-         for ($cont=0; $cont<count($catalogos); $cont++)
-         {
-             $catalogo=$catalogos[$cont]['NombreCatalogo'];
-             $query.= $NombreRepositorio.".".$catalogo.",";
-             for($aux=1; $aux<count($EstructuraCatalogos[$catalogo]); $aux++)  /* 1 es el tipo */
-             {
-                 $NombreCatalogo=$catalogos[$cont]['NombreCatalogo'];
-                 $query.= $NombreCatalogo.".".$EstructuraCatalogos[$catalogo][$aux]['name'].",";
-             }                   
-             /* substr obtiene el prrefijo de cada tabla pe. Rep.ClaveEmpresa, Rep.NombreArchivo, etct */
-             $InnerJoin.=" LEFT JOIN $NombreRepositorio"."_".$NombreCatalogo." ".$NombreCatalogo ." ON ".$NombreRepositorio.".".$NombreCatalogo."=".  $NombreCatalogo.".Id".$NombreCatalogo;
-         }       
-                           
-         $query=trim($query,',');
-         $InnerJoin=trim($InnerJoin,',');         
-         $query.=' FROM '.$NombreRepositorio." ".$NombreRepositorio;         
-         $query= $query.$InnerJoin." WHERE ".$NombreRepositorio.".IdRepositorio=$IdFile";
-         
+        /* Campos de default en repositorio */
+        for($cont=0; $cont<count($ArrayStructureDefault); $cont++)
+        {
+            $CampoDefault=$ArrayStructureDefault[$cont]['name'];
+            $query.=$NombreRepositorio.".".$CampoDefault.",";
+        }
+
+        /* Campos del repositorio */
+        for($cont=0; $cont<count($EstructuraRepositorio); $cont++)
+        {
+            $query.= $NombreRepositorio.".".$EstructuraRepositorio[$cont]['name'].",";
+        }
+
+
+        /* Se concatenan los campos de los catálogos */
+        for ($cont=0; $cont<count($catalogos); $cont++)
+        {
+            $catalogo=$catalogos[$cont]['NombreCatalogo'];
+            $query.= $NombreRepositorio.".".$catalogo.",";
+            for($aux=1; $aux<count($EstructuraCatalogos[$catalogo]); $aux++)  /* 1 es el tipo */
+            {
+                $NombreCatalogo=$catalogos[$cont]['NombreCatalogo'];
+                $query.= $NombreCatalogo.".".$EstructuraCatalogos[$catalogo][$aux]['name'].",";
+            }
+            /* substr obtiene el prrefijo de cada tabla pe. Rep.ClaveEmpresa, Rep.NombreArchivo, etct */
+            $InnerJoin.=" LEFT JOIN $NombreRepositorio"."_".$NombreCatalogo." ".$NombreCatalogo ." ON ".$NombreRepositorio.".".$NombreCatalogo."=".  $NombreCatalogo.".Id".$NombreCatalogo;
+        }
+
+        $query=trim($query,',');
+        $InnerJoin=trim($InnerJoin,',');
+        $query.=' FROM '.$NombreRepositorio." ".$NombreRepositorio;
+        $query= $query.$InnerJoin." WHERE ".$NombreRepositorio.".IdRepositorio=$IdFile";
+
         $File = $this->doDetailQuery($DataBaseName, $query);
         
         if(!is_array($File))
@@ -923,10 +846,11 @@ class ContentManagement {
                 
             }
             else
-                return XML::XMLReponse ("Error", 0, "Error al actualizar los datos. $ResultUpdateRepositorioGlobal. <p>$UpdateRepositorioGlobal</p>");            
+                return XML::XMLReponse ("Error", 0, "Error al actualizar los datos. $ResultUpdateRepositorioGlobal. <p>$UpdateRepositorioGlobal</p>");
         }
         else
             return XML::XMLReponse("Error", 0, "Error al Intentar actualar los Datos. ".$ResultUpdate);
+
     }
     /***************************************************************************
      *  Se devuelven los campos para ser mostrados en la vista de usuario, los campo
@@ -990,34 +914,34 @@ class ContentManagement {
                
         /* Se genera el Query que realiza la consulta con el detalle del archivo a traves de las estructuras
          * del repositorio y de los catálogos */
-                
-         /* Campos de default en repositorio */
-         for($cont=0; $cont<count($ArrayStructureDefault); $cont++)
-         {             
-             $CampoDefault=$ArrayStructureDefault[$cont]['name'];
-             $query.=$NombreRepositorio.".".$CampoDefault.",";
-         }
-         
-         /* Campos del repositorio */
-         for($cont=0; $cont<count($EstructuraRepositorio); $cont++)       
-         {
-             $query.= $NombreRepositorio.".".$EstructuraRepositorio[$cont]['name'].",";           
-         }   
-         
 
-         /* Se concatenan los campos de los catálogos */
-         for ($cont=0; $cont<count($catalogos); $cont++)
-         {
-             $catalogo=$catalogos[$cont]['NombreCatalogo'];
-             $query.= $NombreRepositorio.".".$catalogo.",";
-             for($aux=1; $aux<count($EstructuraCatalogos[$catalogo]); $aux++)  /* 1 es el tipo */
-             {
-                 $NombreCatalogo=$catalogos[$cont]['NombreCatalogo'];
-                 $query.= $NombreCatalogo.".".$EstructuraCatalogos[$catalogo][$aux]['name'].",";
-             }                   
-             /* substr obtiene el prrefijo de cada tabla pe. Rep.ClaveEmpresa, Rep.NombreArchivo, etct */
-             $InnerJoin.=" LEFT JOIN $NombreRepositorio"."_".$NombreCatalogo." ".$NombreCatalogo ." ON ".$NombreRepositorio.".".$NombreCatalogo."=".  $NombreCatalogo.".Id".$NombreCatalogo;
-         }       
+        /* Campos de default en repositorio */
+        for($cont=0; $cont<count($ArrayStructureDefault); $cont++)
+        {
+            $CampoDefault=$ArrayStructureDefault[$cont]['name'];
+            $query.=$NombreRepositorio.".".$CampoDefault.",";
+        }
+
+        /* Campos del repositorio */
+        for($cont=0; $cont<count($EstructuraRepositorio); $cont++)
+        {
+            $query.= $NombreRepositorio.".".$EstructuraRepositorio[$cont]['name'].",";
+        }
+
+
+        /* Se concatenan los campos de los catálogos */
+        for ($cont=0; $cont<count($catalogos); $cont++)
+        {
+            $catalogo=$catalogos[$cont]['NombreCatalogo'];
+            $query.= $NombreRepositorio.".".$catalogo.",";
+            for($aux=1; $aux<count($EstructuraCatalogos[$catalogo]); $aux++)  /* 1 es el tipo */
+            {
+                $NombreCatalogo=$catalogos[$cont]['NombreCatalogo'];
+                $query.= $NombreCatalogo.".".$EstructuraCatalogos[$catalogo][$aux]['name'].",";
+            }
+            /* substr obtiene el prrefijo de cada tabla pe. Rep.ClaveEmpresa, Rep.NombreArchivo, etct */
+            $InnerJoin.=" LEFT JOIN $NombreRepositorio"."_".$NombreCatalogo." ".$NombreCatalogo ." ON ".$NombreRepositorio.".".$NombreCatalogo."=".  $NombreCatalogo.".Id".$NombreCatalogo;
+        }
 
          $query = trim($query,',');
          $InnerJoin = trim($InnerJoin,',');         
@@ -1242,26 +1166,26 @@ class ContentManagement {
          }   
          
 
-         /* Se concatenan los campos de los catálogos */
-         for ($cont=0; $cont<count($catalogos); $cont++)
-         {
-             $catalogo=$catalogos[$cont]['NombreCatalogo'];
-             $query.= $NombreRepositorio.".".$catalogo.",";
-             for($aux=1; $aux<count($EstructuraCatalogos[$catalogo]); $aux++)  /* 1 es el tipo */
-             {
-                 $NombreCatalogo=$catalogos[$cont]['NombreCatalogo'];
-                 $query.= $NombreCatalogo.".".$EstructuraCatalogos[$catalogo][$aux]['name'].",";
-             }                   
-             /* substr obtiene el prrefijo de cada tabla pe. Rep.ClaveEmpresa, Rep.NombreArchivo, etct */
-             $InnerJoin.=" LEFT JOIN $NombreRepositorio"."_".$NombreCatalogo." ".$NombreCatalogo ." ON ".$NombreRepositorio.".".$NombreCatalogo."=".  $NombreCatalogo.".Id".$NombreCatalogo;
-         }       
-                           
-         $query=trim($query,',');
-         $InnerJoin=trim($InnerJoin,',');        
-         
-         $query.=' FROM '.$NombreRepositorio." ".$NombreRepositorio;         
-         $query= $query.$InnerJoin." WHERE ".$NombreRepositorio.".IdRepositorio=$IdFile";
-                  
+        /* Se concatenan los campos de los catálogos */
+        for ($cont=0; $cont<count($catalogos); $cont++)
+        {
+            $catalogo=$catalogos[$cont]['NombreCatalogo'];
+            $query.= $NombreRepositorio.".".$catalogo.",";
+            for($aux=1; $aux<count($EstructuraCatalogos[$catalogo]); $aux++)  /* 1 es el tipo */
+            {
+                $NombreCatalogo=$catalogos[$cont]['NombreCatalogo'];
+                $query.= $NombreCatalogo.".".$EstructuraCatalogos[$catalogo][$aux]['name'].",";
+            }
+            /* substr obtiene el prrefijo de cada tabla pe. Rep.ClaveEmpresa, Rep.NombreArchivo, etct */
+            $InnerJoin.=" LEFT JOIN $NombreRepositorio"."_".$NombreCatalogo." ".$NombreCatalogo ." ON ".$NombreRepositorio.".".$NombreCatalogo."=".  $NombreCatalogo.".Id".$NombreCatalogo;
+        }
+
+        $query=trim($query,',');
+        $InnerJoin=trim($InnerJoin,',');
+
+        $query.=' FROM '.$NombreRepositorio." ".$NombreRepositorio;
+        $query= $query.$InnerJoin." WHERE ".$NombreRepositorio.".IdRepositorio=$IdFile";
+
         $File=array();
         
         $conexion=  $BD->Conexion();
@@ -1457,10 +1381,10 @@ class ContentManagement {
             $XML->ResponseXmlFromArray("Busqueda", "Resultado", 0); 
             return;
         }
-        
-        $ConsultaBusqueda='SELECT IdRepositorio, TipoArchivo, FechaIngreso, NombreArchivo, Full, RutaArchivo FROM '.$NombreRepositorio.' WHERE IdDIrectory = '.$IdDirectory;
-        $Resultado=$BD->ConsultaSelect($DataBaseName, $ConsultaBusqueda);           
-        $XML->ResponseXmlFromArray("Busqueda", "Resultado", $Resultado['ArrayDatos']);        
+
+        $ConsultaBusqueda="SELECT IdRepositorio, TipoArchivo, FechaIngreso, NombreArchivo, Full, RutaArchivo FROM $NombreRepositorio WHERE IdDIrectory = $IdDirectory  AND status=1";
+        $Resultado=$BD->ConsultaSelect($DataBaseName, $ConsultaBusqueda);
+        $XML->ResponseXmlFromArray("Busqueda", "Resultado", $Resultado['ArrayDatos']);
     }
     
     
@@ -1475,9 +1399,8 @@ class ContentManagement {
         $NombreUsuario = $userData['userName'];
         $IdUsuario = $userData['idUser'];
         $IdGroup = $userData['idGroup'];
-        
-        $ConsultaBusqueda = 'SELECT * FROM RepositorioGlobal rg INNER JOIN RepositoryControl rc ON rg.IdRepositorio = rc.IdRepositorio WHERE MATCH (rg.Full) AGAINST (\''.$Search.'\' IN BOOLEAN MODE) AND rc.IdGrupo = '.$IdGroup;
 
+        $ConsultaBusqueda = 'SELECT * FROM RepositorioGlobal rg INNER JOIN RepositoryControl rc ON rg.IdRepositorio = rc.IdRepositorio WHERE MATCH (rg.Full) AGAINST (\''.$Search.'\' IN BOOLEAN MODE) AND rc.IdGrupo ='.$IdGroup.' AND rg.status=1';
         $Resultado = $this->db->ConsultaSelect($DataBaseName, $ConsultaBusqueda);        
 
         if($Resultado['Estado']!= 1)
@@ -1488,7 +1411,6 @@ class ContentManagement {
         XML::XmlArrayResponse("Busqueda", "Resultado", $Resultado['ArrayDatos']);                           
         
     }
-    
  
     
     /***************************************************************************
@@ -1523,28 +1445,28 @@ class ContentManagement {
                 
         //Validamos el tipo de archivo, el tamaño en bytes y que la extensión sea válida
         if ((($type == "image/gif")
-              || ($type == "image/jpeg")
-              || ($type == "image/png")
-              || ($type == "image/pjpeg")
-              || ($type == "application/pdf")
-              || ($type == "text/xml"))
-              && ($size < $tamanioPermitido)
-             ){
-                      //Si no hubo un error al subir el archivo temporalmente
-                      if ($_FILES['archivo']["error"] > 0){
-                             $XML->ResponseXML("Error", 0, "Return Code: " . $_FILES['archivo']['error']);
-                      }
-                      else{
-                            //Si el archivo ya existe se muestra el mensaje de error
-                            if (file_exists("Temp/" . $name)){
-                                   $XML->ResponseXML("Error", 0, "Return Code: " . $name. " ya existe. ");
-                            }
-                            else{
-                                   //Se mueve el archivo de su ruta temporal a una ruta establecida
-                                   move_uploaded_file($tmp_name,"Temp/" . $name);
-                                   $XML->ResponseXML("UploadFile", 1, "Archivo almacenado en: " . "Temp/" . $name);
-                            }
-                      }
+                || ($type == "image/jpeg")
+                || ($type == "image/png")
+                || ($type == "image/pjpeg")
+                || ($type == "application/pdf")
+                || ($type == "text/xml"))
+            && ($size < $tamanioPermitido)
+        ){
+            //Si no hubo un error al subir el archivo temporalmente
+            if ($_FILES['archivo']["error"] > 0){
+                $XML->ResponseXML("Error", 0, "Return Code: " . $_FILES['archivo']['error']);
+            }
+            else{
+                //Si el archivo ya existe se muestra el mensaje de error
+                if (file_exists("Temp/" . $name)){
+                    $XML->ResponseXML("Error", 0, "Return Code: " . $name. " ya existe. ");
+                }
+                else{
+                    //Se mueve el archivo de su ruta temporal a una ruta establecida
+                    move_uploaded_file($tmp_name,"Temp/" . $name);
+                    $XML->ResponseXML("UploadFile", 1, "Archivo almacenado en: " . "Temp/" . $name);
+                }
+            }
         }
         else{
              $XML->ResponseXML("Error", 0,  "Archivo inválido");
@@ -1589,32 +1511,32 @@ class ContentManagement {
         /* Primero se Mueve el archivo a su destino luego se realiza el insert en la BD */ 
         if ($_FILES['archivo']["error"] > 0)
         {
-                 $XML->ResponseXML("Error", 0, "Return Code: " . $_FILES['archivo']['error']);
-                 return;
+            $XML->ResponseXML("Error", 0, "Return Code: " . $_FILES['archivo']['error']);
+            return;
         }
-            //Si el archivo ya existe se muestra el mensaje de error
-            $t=1; 
-            while(file_exists($PathDestino.$name)){ 
-             $archivo = $name; 
-             $archivo=substr($archivo,0,strpos($archivo,"."))."_$t".strstr($archivo,".");  
-             $name=$archivo;
-             $t++; 
-             $renombrado=1;
-             $NombreArchivo=$name;
-            } 
-            
-            if(!file_exists($PathDestino))
-                mkdir ($PathDestino,0777,true);
-            
-            //Se mueve el archivo de su ruta temporal a una ruta establecida
-            if(!($mover=move_uploaded_file($tmp_name,$PathDestino.$name)))
-            {
-                $XML->ResponseXML("Error", "0", "El archivo no se pudo mover a su destino. $mover");
-                return;
-            }
-            
-            if($renombrado==1){$renombrado="El archivo ya existía y fué renombrado a ".$name;}else{$renombrado='';}
-                                
+        //Si el archivo ya existe se muestra el mensaje de error
+        $t=1;
+        while(file_exists($PathDestino.$name)){
+            $archivo = $name;
+            $archivo=substr($archivo,0,strpos($archivo,"."))."_$t".strstr($archivo,".");
+            $name=$archivo;
+            $t++;
+            $renombrado=1;
+            $NombreArchivo=$name;
+        }
+
+        if(!file_exists($PathDestino))
+            mkdir ($PathDestino,0777,true);
+
+        //Se mueve el archivo de su ruta temporal a una ruta establecida
+        if(!($mover=move_uploaded_file($tmp_name,$PathDestino.$name)))
+        {
+            $XML->ResponseXML("Error", "0", "El archivo no se pudo mover a su destino. $mover");
+            return;
+        }
+
+        if($renombrado==1){$renombrado="El archivo ya existía y fué renombrado a ".$name;}else{$renombrado='';}
+
         $cadenaCampos='';
         $cadenaValores='';
         
@@ -1808,11 +1730,11 @@ class ContentManagement {
 //                . "on re.ClaveEmpresa=em.ClaveEmpresa WHERE em.IdEmpresa=$IdEmpresa";     
         
         $query = "SELECT  em.IdEmpresa, re.IdRepositorio, re.NombreRepositorio FROM Repositorios re "
-                . "INNER JOIN RepositoryControl rc ON rc.IdRepositorio = re.IdRepositorio "
-                . "INNER JOIN Empresas em on re.ClaveEmpresa=em.ClaveEmpresa "
-                . "WHERE rc.IdGrupo = $IdGrupo";
-        
-        /* Resultado de Query */        
+            . "INNER JOIN RepositoryControl rc ON rc.IdRepositorio = re.IdRepositorio "
+            . "INNER JOIN Empresas em on re.ClaveEmpresa=em.ClaveEmpresa "
+            . "WHERE rc.IdGrupo = $IdGrupo";
+
+        /* Resultado de Query */
         $ListRepositorios= $BD->ConsultaSelect($DataBaseName, $query);
         
         /* Comprobación del Estado de la Consulta */
