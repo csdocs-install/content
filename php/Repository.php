@@ -222,7 +222,7 @@ class Repository {
 
         $DefaultStructProperties->addChild('NombreArchivo');
         $DefaultStructProperties->NombreArchivo->addAttribute("type", "VARCHAR");
-        $DefaultStructProperties->NombreArchivo->addAttribute("long", "100");
+        $DefaultStructProperties->NombreArchivo->addAttribute("long", "250");
         $DefaultStructProperties->NombreArchivo->addAttribute("required", "true");
 
         $DefaultStructProperties->addChild('Full');
