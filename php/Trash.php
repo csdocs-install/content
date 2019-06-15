@@ -807,6 +807,8 @@ class Trash {
     
     private function getDirectoriesQuery($DataBaseName, $NombreRepositorio, $IdUsuario, $NombreUsuario){
         $BD= new DataBase();
+        $QueryDirectoriesTrashed="SELECT* FROM dir_$NombreRepositorio WHERE status=0";
+        /*
         $QueryDirectoriesTrashed= 
         "SELECT  dir_$NombreRepositorio.IdDirectory, "
         . "temp_dir_$NombreRepositorio.IdDirectory, temp_dir_$NombreRepositorio.title, temp_dir_$NombreRepositorio.IdUsuario,"
@@ -814,10 +816,12 @@ class Trash {
         . "FROM temp_dir_$NombreRepositorio temp_dir_$NombreRepositorio LEFT JOIN dir_$NombreRepositorio dir_$NombreRepositorio "
         . "ON dir_$NombreRepositorio.IdDirectory = temp_dir_$NombreRepositorio.parent_id "
         . "  WHERE temp_dir_$NombreRepositorio.FlagFather = 1 AND temp_dir_$NombreRepositorio.IdUsuario = $IdUsuario";
-        
+        */
         /* Los administradores pueden ver todos los elementos de la papelera */                
         if(strcasecmp($NombreUsuario, "root")==0)
         {
+            $QueryDirectoriesTrashed="SELECT* FROM dir_$NombreRepositorio WHERE status=0";
+            /*
             $QueryDirectoriesTrashed= 
             "SELECT  dir_$NombreRepositorio.IdDirectory, "
             . "temp_dir_$NombreRepositorio.IdDirectory, temp_dir_$NombreRepositorio.title, temp_dir_$NombreRepositorio.IdUsuario,"
@@ -825,6 +829,7 @@ class Trash {
             . "FROM temp_dir_$NombreRepositorio temp_dir_$NombreRepositorio LEFT JOIN dir_$NombreRepositorio dir_$NombreRepositorio "
             . "ON dir_$NombreRepositorio.IdDirectory = temp_dir_$NombreRepositorio.parent_id "
             . "  WHERE temp_dir_$NombreRepositorio.FlagFather = 1";
+            */
         }         
         
         $conexion = $BD->Conexion();
@@ -856,12 +861,16 @@ class Trash {
         $IdRepositorio=  filter_input(INPUT_POST, "IdRepositorio");
         $IdUsuario=filter_input(INPUT_POST, "IdUsuario");
         $NombreUsuario=  filter_input(INPUT_POST, "nombre_usuario");
-        
 
-        $QueryGetFiles = "SELECT dir.IdDirectory , dir.title, rep.IdRepositorio, rep.NombreArchivo, rep.RutaArchivo, rep.TipoArchivo, rep.IdUsuario, rep.NombreUsuario FROM temp_rep_$NombreRepositorio rep LEFT JOIN dir_$NombreRepositorio dir ON dir.IdDirectory = rep.IdDirectory AND rep.IdUsuario = $IdUsuario";
+        $QueryGetFiles = "SELECT * FROM $NombreRepositorio INNER JOIN dir_$NombreRepositorio ON $NombreRepositorio.IdDirectory=dir_$NombreRepositorio.IdDirectory WHERE $NombreRepositorio.status=0";
+        //$QueryGetFiles = "SELECT dir.IdDirectory , dir.title, rep.IdRepositorio, rep.NombreArchivo, rep.RutaArchivo, rep.TipoArchivo, rep.IdUsuario, rep.NombreUsuario FROM temp_rep_$NombreRepositorio rep LEFT JOIN dir_$NombreRepositorio dir ON dir.IdDirectory = rep.IdDirectory AND rep.IdUsuario = $IdUsuario";
         if(strcasecmp($NombreUsuario, "root")==0)
         {
-            $QueryGetFiles = "SELECT dir.IdDirectory , dir.title, rep.IdRepositorio, rep.NombreArchivo, rep.RutaArchivo, rep.TipoArchivo, rep.IdUsuario, rep.NombreUsuario FROM temp_rep_$NombreRepositorio rep LEFT JOIN dir_$NombreRepositorio dir ON dir.IdDirectory = rep.IdDirectory";
+            $QueryGetFiles = "SELECT * FROM $NombreRepositorio INNER JOIN dir_$NombreRepositorio ON $NombreRepositorio.IdDirectory=dir_$NombreRepositorio.IdDirectory WHERE $NombreRepositorio.status=0";
+            //$QueryGetFiles = "SELECT dir.IdDirectory , dir.title, rep.IdRepositorio, rep.NombreArchivo, rep.RutaArchivo, rep.TipoArchivo FROM $NombreRepositorio rep LEFT JOIN dir_$NombreRepositorio dir ON dir.IdDirectory = rep.IdDirectory AND rep.status=0";
+            //  $QueryGetFiles = "SELECT dir.IdDirectory , dir.title, rep.IdRepositorio, rep.NombreArchivo, rep.RutaArchivo, rep.TipoArchivo, rep.IdUsuario, rep.NombreUsuario FROM temp_rep_$NombreRepositorio rep LEFT JOIN dir_$NombreRepositorio dir ON dir.IdDirectory = rep.IdDirectory";
+
+
         }
         
         $ResultGetFiles = $BD->ConsultaSelect($DataBaseName, $QueryGetFiles);
@@ -886,8 +895,7 @@ class Trash {
         $NombreUsuario=  filter_input(INPUT_POST, "nombre_usuario");                                        
         /* Se registra el proceso en Fifo y se crea el archivo con los elementos a borrar en 
          * RestoreTrash/DataBaseName/User/ */
-        $RutaFilesTrash="$RoutFile/Configuracion/RestoreTrash/$DataBaseName/$NombreUsuario";       
-        
+        $RutaFilesTrash="$RoutFile/Configuracion/RestoreTrash/$DataBaseName/$NombreUsuario";
         if(!file_exists($RutaFilesTrash))
             if(!mkdir($RutaFilesTrash, 0777, true))
                 return XML::XMLReponse("Error", 0, "No se pudo crear el directorio <b>RestoreTrash</p>"); 

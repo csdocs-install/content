@@ -258,10 +258,11 @@ function BuildDeletedTableFiles(xml)
         var IdDirectory =$File.find("IdDirectory").text();
         var TipoDocumento =$File.find("TipoArchivo").text();
         var TitleDirectory = $File.find("title").text();
+        var Estado        =$File.find("status").text()
         if(!IdDirectory>0)IdDirectory=0;
         
         var ColumnDirectory = '';   /* Icono de directorio y su nombre donde pertenece el documento. */
-        if(TitleDirectory.length>0){ColumnDirectory = '<img src="img/DirectorioEnable.png" width="25px" height="25px" title="'+TitleDirectory+'">'+TitleDirectory;}
+        if(Estado!="0"){ColumnDirectory = '<img src="img/DirectorioEnable.png" width="25px" height="25px" title="'+TitleDirectory+'">'+TitleDirectory;}
         else {ColumnDirectory = '<img src="img/DirectorioDesabled.png" width="25px" height="25px" title="'+TitleDirectory+'">'+"Directorio no disponible";}        
         
         var data = [
