@@ -202,17 +202,49 @@ function BuildDeletedTableDirectories(xml)
     
     $('#TableTrashDirectories tbody').on( 'click', 'tr', function () {
         $(this).toggleClass('selected');
-    } );   
-    
-    $(xml).find("Directory").each(function()
+    } );
+
+    var Directory = $(xml).find("Directory");
+    for(var i=0; i<Directory.length;i++){
+        var Title=Directory.find("title")[i].childNodes[0].nodeValue;
+        var IdParent =Directory.find("IdParent")[i].childNodes[0].nodeValue;
+        var IdDirectory =Directory.find("IdDirectory")[i].childNodes[0].nodeValue;
+        var img = 0;
+
+        for (var j=0; j<Directory.length;j++){
+            var comp =  Directory.find("IdDirectory")[j].childNodes[0].nodeValue;
+            var Title2=Directory.find("title")[j].childNodes[0].nodeValue;
+
+            if (comp==IdParent){
+                img='<center><img src="img/DirectorioDesabled.png"></center>';
+            }else{
+                img='<center><img src="img/DirectorioEnable.png"></center>';
+            }
+        }
+          // console.log(Directory[0].getElementsByTagName("title")[0].childNodes[0].nodeValue);
+    }
+    /*$(xml).find("Directory").each(function()
     {
         var $Directory=$(this);
         var Title=$Directory.find("title").text();
         var IdParent =$Directory.find("IdParent").text();
         var IdDirectory =$Directory.find("IdDirectory").text();
-        if(!IdParent>0)IdParent=0;
         var img = 0;
-        if(IdParent>0)
+
+        for (var i=0; i<$Directory.length; i++){
+            var Directorio =$Directory.find("IdDirectory").text();
+            if(Directorio=IdParent) {
+                console.log(Directorio);
+            }
+        }
+        //if(Directorio=IdParent) {
+
+        //}
+
+
+        //if(!IdParent>0)IdParent=0;
+        var img = 0;
+        if(IdDirectory>IdParent)
         img='<center><img src="img/DirectorioEnable.png"></center>';
         else
         img='<center><img src="img/DirectorioDesabled.png"></center>';
@@ -230,7 +262,8 @@ function BuildDeletedTableDirectories(xml)
         
         Tabla.draw();
         Tabla.columns.adjust().draw();
-    });      
+
+    });*/
 }
 
 function BuildDeletedTableFiles(xml)
