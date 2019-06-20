@@ -103,9 +103,7 @@ class Usuarios {
 
         $UsersNumber = $UsersNumber_['ArrayDatos']['COUNT(*)'];
 
-        $UsersNumberEncrypted = $EncryptedSetting['UsersNumber'];
-
-        $UserNumberDecrypted = Encrypter::decrypt($UsersNumberEncrypted);
+        $UserNumberDecrypted = Encrypter::checkControlOf("UsersNumber");
 
         if ($UsersNumber >= $UserNumberDecrypted)
             return XML::XMLReponse("warning", 0, "<p>Advertencia</p> <br><br><p>Numéro de usuarios alcanzado para su versión de CSDocs</p>");
