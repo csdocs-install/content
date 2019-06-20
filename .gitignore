@@ -52,5 +52,7 @@ Estructuras
 Fifo
 Log
 prueba.html
-.idea
+.idea/*
 php/.idea
+version/config.ini
+Configuracion/ConexionBD

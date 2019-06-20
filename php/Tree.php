@@ -197,9 +197,9 @@ class Tree {
             $errors=libxml_get_errors();
             
             // Aquí se manejan los errores} 
-            for ($aux=0;$aux<count($errors); $aux++) {                
-                $Error.=$XML->display_xml_error($errors[$aux]);                
-            }
+//            for ($aux=0;$aux<count($errors); $aux++) {
+//                $Error.=$XML->display_xml_error($errors[$aux]);
+//            }
             
             if(count($errors)>0){libxml_clear_errors();  /* Se limpia buffer de errores */continue;}
             else
@@ -221,15 +221,15 @@ class Tree {
         
         header ("Content-Type:text/xml");
         echo $doc->saveXML();
-    }
-
-    function DeleteDir()
-    {
+   }
+   
+   function DeleteDir()
+   {
         $BD= new DataBase();
-//        $XML=new XML();
-//        $Fifo= new Fifo();
-//        $Log = new Log();
-//        $estado=TRUE;
+        $XML=new XML();
+        $Fifo= new Fifo();
+        $Log = new Log();
+        $estado=TRUE;
         
         $IdRepositorio=filter_input(INPUT_POST, "IdRepositorio");
         $DataBaseName=filter_input(INPUT_POST, "DataBaseName");
@@ -259,7 +259,7 @@ class Tree {
                                     ";
             $deleteFileGlobal=$BD->ConsultaQuery($DataBaseName, $QueryDeleteFileGlobal);
             if ($deleteFileGlobal==1){
-                return XML::XMLReponse("ModifyDir", 1, "Modificado con éxito");
+                return XML::XMLReponse("DeleteDir", 1, "Directorio eliminado con éxito");
                 //Log::WriteEvent("19", $IdUsuario, $NombreUsuario, $NameDirectory);
             }
         }

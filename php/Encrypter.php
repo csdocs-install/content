@@ -5,15 +5,33 @@
  * @author Daniel
  */
 class Encrypter {
-    private static $Key = "csdocsadmcs1234567";
- 
-    public static function encrypt ($input) {
-        $output = base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, md5(Encrypter::$Key), $input, MCRYPT_MODE_CBC, md5(md5(Encrypter::$Key))));
-        return $output;
+    /**
+     * @param $controlName
+     * @return int
+     */
+    public static function checkControlOf($controlName) {
+        $version = self::versionContent();
+
+        if(!isset($version[$controlName]))
+            die("$controlName doesn't exists in version control");
+
+        if(!is_int((int) $version[$controlName]))
+            die("$controlName invalid value");
+
+        return (int) $version[$controlName];
     }
- 
-    public static function decrypt ($input) {
-        $output = rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, md5(Encrypter::$Key), base64_decode($input), MCRYPT_MODE_CBC, md5(md5(Encrypter::$Key))), "\0");
-        return $output;
+
+    /**
+     * @return array|bool|string
+     */
+    public static function versionContent() {
+        $RoutFile = dirname(getcwd());
+
+        $EncryptedSetting = parse_ini_file("$RoutFile/version/config.ini", true);
+
+        if($EncryptedSetting === FALSE)
+            die("<p><b>Error</b> en el registro de configuración de CSDocs $EncryptedSetting</p>");
+
+        return $EncryptedSetting;
     }
 }

@@ -248,18 +248,9 @@ var ContentArbol = function(){
                     {
                         /* Se quita el directorio y se abre la barra de progreso */
                         $('.contentDetail').empty();
-                        node.remove();                    
-                        $('body').append('<div id ="'+KeyProcess+'"> <div id = "progress_'+KeyProcess+'"></div> <div id ="detail_'+KeyProcess+'"></div> </div>');
-                        $('#detail_'+KeyProcess).append('<div class="loading"><img src="../img/loadinfologin.gif"></div>');
-                        $('#'+KeyProcess).dialog({title:"Eliminando "+title, width:350, height:200, minWidth:350, minHeight:200,
-                        buttons:{"Cancelar":{click:function(){CancelDeleteDir(PathStatus,PathAdvancing);},text:"Cancelar"}},
-                        });
-                        $('#'+KeyProcess).dialog({ dialogClass: 'no-close' });
-                        $('#progress_'+KeyProcess).progressbar({ value: 0 });
-                        $('#detail_'+KeyProcess).append('<p>Obteniendo detalles de progreso</p>');   
-
-                        Process[KeyProcess]=setInterval("ProgressOfDeleting('"+PathAdvancing+"', '"+KeyProcess+"','"+title+"')", 2000);
-                    }                
+                        node.remove();
+                        Notificacion(mensaje);
+                    }
                 });
 
                 $(xml).find("Error").each(function()
@@ -507,67 +498,6 @@ function CM_ModifyDir(IdDirectory,NameDirectory)
    };
 }
 
-/* Muestra el progreso del proceso de borrado */
-function ProgressOfDeleting(PathAdvancing,KeyProcess,title)
-{        
-    $.ajax({
-      async:true, 
-      cache:false,
-      dataType:"html", 
-      type: 'POST',   
-      url: "php/ServiceDeleteDirectory.php",
-      data: "opcion=CheckAdvancing&PathAdvancing="+PathAdvancing+'&KeyProcess='+KeyProcess, 
-      success:  function(xml){
-          $('.loading').remove();
-          ($.parseXML( xml )===null) ? $('#'+KeyProcess).dialog('close') : xml=$.parseXML( xml );
-           $(xml).find("Progress").each(function()
-            {                               
-                $('#detail_'+KeyProcess).empty();
-                var $Advancing=$(this);
-                var TotalDirectories=$Advancing.find("TotalDirectories").text();
-                var TitleDirectory=$Advancing.find("TitleDirectory").text();
-                var TitleFile=$Advancing.find("TitleFile").text();
-                var NumberDirectory=$Advancing.find("NumberDirectory").text();
-                
-                var TotalProgress=(NumberDirectory/TotalDirectories)*100;
-                $('#detail_'+KeyProcess).append('<p>Eliminando '+NumberDirectory+ " de "+TotalDirectories+" directorios</p>");
-                $('#detail_'+KeyProcess).append('<p>Procesando directorio: '+TitleDirectory+"</p>");
-                $('#detail_'+KeyProcess).append('<p>Documento : '+TitleFile+"</p>");
-                
-                /* Avance de la barra de progreso */
-                $('#progress_'+KeyProcess).progressbar({ value:TotalProgress});                                                
-            });
-            
-            $(xml).find("NotFound").each(function()
-            {               
-                var $Advancing=$(this);
-                var NotFound=$Advancing.find("NotFound").text();                
-                $('#'+KeyProcess).dialog('close');
-                clearInterval(Process[KeyProcess]);
-            });
-            
-            $(xml).find("Error").each(function()
-            {
-                var $Error=$(this);
-                var estado=$Error.find("Estado").text();
-                var mensaje =$Error.find("Mensaje").text();
-                $('#'+KeyProcess).dialog('close');
-                errorMessage(mensaje);
-                clearInterval(Process[KeyProcess]);
-            });         
-                        
-            if($(xml).find("Ok").length>0)
-            {
-                $('#'+KeyProcess).dialog('close');
-                clearInterval(Process[KeyProcess]);
-                Notificacion("Borrado de directorios","El usuario elimino el directorio: <br>"+title); 
-            }            
-      },
-      beforeSend:function(){},
-      error:function(objXMLHttpRequest){errorMessage(objXMLHttpRequest);$('#DeletePathAdvancing').dialog('close');clearInterval(Process[KeyProcess]);}
-    });
-}
-
 function CancelDeleteDir(PathStatus,PathAdvancing)
 {        
     $.ajax({
@@ -662,4 +592,3 @@ ClassTree.prototype.GetPath = function(IdTree)
     return PathArchivo;
 };
 
-   

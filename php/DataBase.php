@@ -739,8 +739,8 @@ class DataBase {
                     $ResultTablaTempDir = $this->crear_tabla($DataBaseName, $tabla_temporal_directorio);
                     $this->SalidaLog("Error al crear Temporal Directorio $nombre_tabla", $ResultTablaTempDir, "Temporal Directorio $nombre_tabla creada con éxito");
 
-                    $ResultTablaTempRep = $this->crear_tabla($DataBaseName, $tabla_temporal_repositorio);
-                    $this->SalidaLog("Error al crear Temporal Repositorio $nombre_tabla", $ResultTablaTempRep, "Temporal Repositorio $nombre_tabla creada con éxito");
+//                    $ResultTablaTempRep = $this->crear_tabla($DataBaseName, $tabla_temporal_repositorio);
+//                    $this->SalidaLog("Error al crear Temporal Repositorio $nombre_tabla", $ResultTablaTempRep, "Temporal Repositorio $nombre_tabla creada con éxito");
                 }
                 else {
                     echo "<p>Error al Crear el Repositorio temporal $ResultTempDir";

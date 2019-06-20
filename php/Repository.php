@@ -13,6 +13,7 @@ require_once 'Log.php';
 require_once 'DesignerForms.php';
 require_once 'Session.php';
 require_once 'Catalog.php';
+require_once 'Encrypter.php';
 
 if (!isset($_SESSION))
     session_start();
@@ -191,11 +192,24 @@ class Repository {
     private function NewRepository() {
         $DB = new DataBase();
 
-//        $DataBaseName = filter_input(INPUT_POST, "DataBaseName");
+        $DataBaseName = filter_input(INPUT_POST, "DataBaseName");
 //        $IdUser = filter_input(INPUT_POST, "IdUser");
 //        $UserName = filter_input(INPUT_POST, "UserName");
         $XMLResponse = filter_input(INPUT_POST, "Xml");
         $xml = simplexml_load_string($XMLResponse);
+
+        $getTotalInstances = $this->getTotalRepositories($DataBaseName);
+
+        if($getTotalInstances['Estado']!=1) {
+            return XML::XMLReponse("Error", 0, "Error al consultar total de repositorios".$getTotalInstances['Estado']);
+        }
+
+        $totalRepositories = $getTotalInstances['ArrayDatos'][0]['COUNT(*)'];
+
+        $autorizeEncriptTotalRepositories = Encrypter::checkControlOf("RepositoriesNumber");
+
+        if((int)$totalRepositories >= (int) $autorizeEncriptTotalRepositories)
+            return XML::XMLReponse("Error", 0,  "Límite alcanzado de repositorios permitidas para su versión");
 
         /*   Se complementa el xml con los datos DefaultStructProperties     */
 
@@ -222,7 +236,7 @@ class Repository {
 
         $DefaultStructProperties->addChild('NombreArchivo');
         $DefaultStructProperties->NombreArchivo->addAttribute("type", "VARCHAR");
-        $DefaultStructProperties->NombreArchivo->addAttribute("long", "100");
+        $DefaultStructProperties->NombreArchivo->addAttribute("long", "250");
         $DefaultStructProperties->NombreArchivo->addAttribute("required", "true");
 
         $DefaultStructProperties->addChild('Full');
@@ -231,6 +245,19 @@ class Repository {
 
         $CreateRepository = $DB->crear_repositorio($xml->CrearEstructuraRepositorio);
         echo "<p>$CreateRepository</p>";
+    }
+
+    /**
+     * @param $instanceName
+     * @return array
+     */
+    public function getTotalRepositories($instanceName) {
+        $DB = new DataBase();
+        $query = "SELECT COUNT(*) FROM CSDocs_Repositorios";
+        $result = $DB->ConsultaSelect($instanceName, $query);
+
+        return $result;
+
     }
 
     private function GetListRepositories($userData) {
