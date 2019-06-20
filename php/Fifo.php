@@ -13,20 +13,24 @@
  */
 
 class Fifo {
+     protected $APP_ROUTE;
+
     public function __construct() {
+        $this->APP_ROUTE = dirname(getcwd());
+
         $this->CreateStack();
     }
     
     private function CreateStack()
     {
-        $fifo="/volume1/web/Fifo/Fifo.ini";
-        $FifoDirectory="/volume1/web/Fifo/";
-        if(!file_exists($FifoDirectory))
-        {
+        $fifo="$this->APP_ROUTE/Fifo/Fifo.ini";
+        $FifoDirectory="$this->APP_ROUTE/Fifo/";
+
+        if(!file_exists($FifoDirectory)) {
             mkdir($FifoDirectory, 0777);
         }
-        if(!file_exists($fifo))
-        {
+
+        if(!file_exists($fifo)) {
             touch($fifo);
         }                    
     }

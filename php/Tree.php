@@ -107,8 +107,8 @@ class Tree {
     
     function getDirectoriesArray($dataBaseName, $repositoryName){
         $DB = new DataBase();
-        
-        $query = "SELECT IdDirectory, parent_id, title FROM dir_$repositoryName";
+
+        $query = "SELECT IdDirectory, parent_id, title FROM dir_$repositoryName WHERE status=1";
         
         $queryResult = $DB->ConsultaSelect($dataBaseName, $query);
         
@@ -225,7 +225,7 @@ class Tree {
    
    function DeleteDir()
    {
-//        $BD= new DataBase();
+        $BD= new DataBase();
         $XML=new XML();
         $Fifo= new Fifo();
         $Log = new Log();
@@ -233,106 +233,133 @@ class Tree {
         
         $IdRepositorio=filter_input(INPUT_POST, "IdRepositorio");
         $DataBaseName=filter_input(INPUT_POST, "DataBaseName");
-        $NombreRepositorio=  filter_input(INPUT_POST, "NombreRepositorio");    
-        $NameDirectory=filter_input(INPUT_POST, "NameDirectory");    
-        $NombreUsuario=filter_input(INPUT_POST, "nombre_usuario");    
-        $IdEmpresa=filter_input(INPUT_POST, "IdEmpresa");    
-        $IdDirectory=filter_input(INPUT_POST, "IdDirectory");    
-        $IdParent = filter_input(INPUT_POST, 'IdParent');
-        $Path=  filter_input(INPUT_POST, "Path");
-        $title=filter_input(INPUT_POST, "title");
-        $IdUsuario = filter_input(INPUT_POST, "IdUsuario");
-        $XMLResponse=filter_input(INPUT_POST, "XMLResponse");      
-        $qdelete='';
-        $xml=  simplexml_load_string($XMLResponse);
-        
-        if(count($xml->Directory)>0)
-        {
-            foreach ($xml->Directory as $delete)
-            {         
-                $qdelete.=" OR IdDirectory=$delete";
-            }
-        }     
-                              
-        /* Se registra el Id del directorio a eliminar */
-        if(!file_exists("../Configuracion/DeleteDirectory/$DataBaseName/$NombreUsuario"))
-        {
-            if(!($mkdir = mkdir("../Configuracion/DeleteDirectory/$DataBaseName/$NombreUsuario",0777,true)))
-            {
-                $XML->ResponseXML("Error", 0, "No se pudo crear el directorio en <b>Configuracion/$DataBaseName/$NombreUsuario</b> <br><br>Detalles:$mkdir"); 
-                return;
+        $NombreRepositorio=  filter_input(INPUT_POST, "NombreRepositorio");
+//        $NameDirectory=filter_input(INPUT_POST, "NameDirectory");
+//        $NombreUsuario=filter_input(INPUT_POST, "nombre_usuario");
+        $IdEmpresa=filter_input(INPUT_POST, "IdEmpresa");
+        $IdDirectory=filter_input(INPUT_POST, "IdDirectory");
+//        $IdParent = filter_input(INPUT_POST, 'IdParent');
+//        $Path=  filter_input(INPUT_POST, "Path");
+        //$title=filter_input(INPUT_POST, "title");
+        //$IdUsuario = filter_input(INPUT_POST, "IdUsuario");
+        //$XMLResponse=filter_input(INPUT_POST, "XMLResponse");
+        //$qdelete='';
+        //$xml=  simplexml_load_string($XMLResponse);
+
+        $QueryDeleteDirectory="UPDATE dir_$NombreRepositorio LEFT JOIN $NombreRepositorio ON dir_$NombreRepositorio.IdDirectory=$NombreRepositorio.IdDirectory
+                        SET dir_$NombreRepositorio.status=0,$NombreRepositorio.status=0
+                        WHERE dir_$NombreRepositorio.IdDirectory IN
+                        (SELECT * FROM (SELECT IdDirectory FROM dir_$NombreRepositorio , (SELECT @pv := '$IdDirectory') initialisation WHERE find_in_set(parent_id, @pv) and length(@pv := concat(@pv, ',', IdDirectory)) or IdDirectory=$IdDirectory) dirs)
+       ";
+        $delete = $BD->ConsultaQuery($DataBaseName, $QueryDeleteDirectory);
+        if($delete==1){
+            $QueryDeleteFileGlobal="UPDATE RepositorioGlobal SET status=0
+                                   WHERE IdEmpresa=$IdEmpresa AND IdRepositorio=$IdRepositorio AND IdDirectory
+                                   IN (SELECT * FROM (SELECT IdDirectory FROM dir_$NombreRepositorio , (SELECT @pv := '$IdDirectory') initialisation WHERE find_in_set(parent_id, @pv) and length(@pv := concat(@pv, ',', IdDirectory)) OR IdDirectory=$IdDirectory) dirs)
+                                    ";
+            $deleteFileGlobal=$BD->ConsultaQuery($DataBaseName, $QueryDeleteFileGlobal);
+            if ($deleteFileGlobal==1){
+                return XML::XMLReponse("DeleteDir", 1, "Directorio eliminado con éxito");
+                //Log::WriteEvent("19", $IdUsuario, $NombreUsuario, $NameDirectory);
             }
         }
-        
-        if(file_exists("../Configuracion/DeleteDirectory/$DataBaseName/$NombreUsuario/DeleteDirectory.ini"))
-            unlink("../Configuracion/DeleteDirectory/$DataBaseName/$NombreUsuario/DeleteDirectory.ini");            
-        
-        $archivo = "/volume1/web/Configuracion/DeleteDirectory/$DataBaseName/$NombreUsuario/DeleteDirectory.ini";
-        $config = fopen($archivo, "a+");
-        if(!($config))
-        {
-            $XML->ResponseXML("Error", 0, "Error al crear archivo de configuración.<br><br>Detalles:<br><br>$config"); 
-            return;        
-        }  /* Error al abrir y crear el archivo de config */
-                
-        fwrite($config, "; Archivo que contiene el directorio a eliminar y sus subdirectorios. ".PHP_EOL);
-        fwrite($config, "[DeleteDirectory]".PHP_EOL);
-        fwrite($config, "DataBaseName=$DataBaseName".PHP_EOL);
-        fwrite($config, "NombreRepositorio=$NombreRepositorio".PHP_EOL);
-        fwrite($config, "IdRepositorio=$IdRepositorio".PHP_EOL);
-        fwrite($config, "NameDirectory=$NameDirectory".PHP_EOL); 
-        fwrite($config, "IdEmpresa=$IdEmpresa".PHP_EOL);              
-        fwrite($config, "IdDirectory=$IdDirectory".PHP_EOL);
-        fwrite($config, "IdParent=$IdParent".PHP_EOL);
-        fwrite($config, "IdUsuario=$IdUsuario".PHP_EOL);
-        fwrite($config, "NombreUsuario=$NombreUsuario".PHP_EOL);
-        fwrite($config, "title=$title".PHP_EOL);
-        fwrite($config, "PathDirectory=$Path".PHP_EOL);
-//        fwrite($config, "QueryDelete[]=$query".PHP_EOL);    
-        fwrite($config, "; Direcoties=> IdDirectory, IdParent, title ".PHP_EOL);
-        fwrite($config, "[Directories]".PHP_EOL);    
-        /* Registro de subdirectorios */
-        if(count($xml->Directory)>0)
-        {
-            foreach ($xml->Directory as $delete)
-            {         
-                fwrite($config, "Directory[]=".$delete->IdDirectory."###".$delete->IdParent."###".$delete->title."###".$delete->Path.PHP_EOL);    
-            }
-        }        
+        return XML::XMLReponse ("Error", 0, "$delete");
 
-        fclose($config);                
-        
-        $KeyProcess=$Fifo->AddToStack("DeleteDirectory", $NombreUsuario, $archivo);                
-        if($KeyProcess===0){$XML->ResponseXML("Error", 0, "Error al registrar el proceso."); return;}
-        
-        rename($archivo, dirname($archivo)."/$KeyProcess.ini");
-        
-        $StartProcess=$Fifo->StartProcess($KeyProcess);
-        
-        if($StartProcess==0){$XML->ResponseXML("Error", 0, "No pudo inicializarse el proceso de borrado del directorio <b>$title</b>"); return 0;}
-        
-        $Log->Write("20", $IdUsuario, $NombreUsuario, $NameDirectory, $DataBaseName);
-        
-        $doc  = new DOMDocument('1.0','utf-8');
-        libxml_use_internal_errors(true);
-        $doc->formatOutput = true;
-        $root = $doc->createElement("DeleteDir");
-        $doc->appendChild($root); 
-        $Estado=$doc->createElement("Estado",$estado);
-        $root->appendChild($Estado);
-        $Mensaje=$doc->createElement("Mensaje","<p>Iniciando Proceso de Borrado del directorio <b>$NameDirectory</b></p>");
-        $root->appendChild($Mensaje);
-        $PathAdvancing=$doc->createElement("PathAdvancing",dirname($archivo)."/Advancing_$KeyProcess.ini");
-        $root->appendChild($PathAdvancing);
-        $PathCancel=$doc->createElement("PathStatus",dirname($archivo)."/Status_$KeyProcess.ini");
-        $root->appendChild($PathCancel);
-        $XmlKeyProcess=$doc->createElement("KeyProcess",$KeyProcess);        
-        $root->appendChild($XmlKeyProcess);
-        header ("Content-Type:text/xml");
-        echo $doc->saveXML();
-                
-   }
-   
+        /*
+ UPDATE RepositorioGlobal SET status=0 WHERE IdEmpresa=1 AND IdRepositorio=1 AND IdDirectory IN (select * from (select IdDirectory from dir_RepoBring , (select @pv := '5') initialisation where find_in_set(parent_id, @pv) and length(@pv := concat(@pv, ',', IdDirectory)) or IdDirectory=5) dirs)
+
+
+
+
+         if(count($xml->Directory)>0)
+         {
+             foreach ($xml->Directory as $delete)
+             {
+                 $qdelete.=" OR IdDirectory=$delete";
+             }
+         }
+
+         /* Se registra el Id del directorio a eliminar
+         if(!file_exists("../Configuracion/DeleteDirectory/$DataBaseName/$NombreUsuario"))
+         {
+             if(!($mkdir = mkdir("../Configuracion/DeleteDirectory/$DataBaseName/$NombreUsuario",0777,true)))
+             {
+                 $XML->ResponseXML("Error", 0, "No se pudo crear el directorio en <b>Configuracion/$DataBaseName/$NombreUsuario</b> <br><br>Detalles:$mkdir");
+                 return;
+             }
+         }
+
+         if(file_exists("../Configuracion/DeleteDirectory/$DataBaseName/$NombreUsuario/DeleteDirectory.ini"))
+             unlink("../Configuracion/DeleteDirectory/$DataBaseName/$NombreUsuario/DeleteDirectory.ini");
+
+         $archivo = "/volume1/web/Configuracion/DeleteDirectory/$DataBaseName/$NombreUsuario/DeleteDirectory.ini";
+         $config = fopen($archivo, "a+");
+         if(!($config))
+         {
+             $XML->ResponseXML("Error", 0, "Error al crear archivo de configuración.<br><br>Detalles:<br><br>$config");
+             return;
+         }  /* Error al abrir y crear el archivo de config
+
+         fwrite($config, "; Archivo que contiene el directorio a eliminar y sus subdirectorios. ".PHP_EOL);
+         fwrite($config, "[DeleteDirectory]".PHP_EOL);
+         fwrite($config, "DataBaseName=$DataBaseName".PHP_EOL);
+         fwrite($config, "NombreRepositorio=$NombreRepositorio".PHP_EOL);
+         fwrite($config, "IdRepositorio=$IdRepositorio".PHP_EOL);
+         fwrite($config, "NameDirectory=$NameDirectory".PHP_EOL);
+         fwrite($config, "IdEmpresa=$IdEmpresa".PHP_EOL);
+         fwrite($config, "IdDirectory=$IdDirectory".PHP_EOL);
+         fwrite($config, "IdParent=$IdParent".PHP_EOL);
+         fwrite($config, "IdUsuario=$IdUsuario".PHP_EOL);
+         fwrite($config, "NombreUsuario=$NombreUsuario".PHP_EOL);
+         fwrite($config, "title=$title".PHP_EOL);
+         fwrite($config, "PathDirectory=$Path".PHP_EOL);
+ //        fwrite($config, "QueryDelete[]=$query".PHP_EOL);
+         fwrite($config, "; Direcoties=> IdDirectory, IdParent, title ".PHP_EOL);
+         fwrite($config, "[Directories]".PHP_EOL);
+         /* Registro de subdirectorios
+         if(count($xml->Directory)>0)
+         {
+             foreach ($xml->Directory as $delete)
+             {
+                 fwrite($config, "Directory[]=".$delete->IdDirectory."###".$delete->IdParent."###".$delete->title."###".$delete->Path.PHP_EOL);
+             }
+         }
+
+         fclose($config);
+
+         $KeyProcess=$Fifo->AddToStack("DeleteDirectory", $NombreUsuario, $archivo);
+         if($KeyProcess===0){$XML->ResponseXML("Error", 0, "Error al registrar el proceso."); return;}
+
+         rename($archivo, dirname($archivo)."/$KeyProcess.ini");
+
+         $StartProcess=$Fifo->StartProcess($KeyProcess);
+
+         if($StartProcess==0){$XML->ResponseXML("Error", 0, "No pudo inicializarse el proceso de borrado del directorio <b>$title</b>"); return 0;}
+
+         $Log->Write("20", $IdUsuario, $NombreUsuario, $NameDirectory, $DataBaseName);
+
+         $doc  = new DOMDocument('1.0','utf-8');
+         libxml_use_internal_errors(true);
+         $doc->formatOutput = true;
+         $root = $doc->createElement("DeleteDir");
+         $doc->appendChild($root);
+         $Estado=$doc->createElement("Estado",$estado);
+         $root->appendChild($Estado);
+         $Mensaje=$doc->createElement("Mensaje","<p>Iniciando Proceso de Borrado del directorio <b>$NameDirectory</b></p>");
+         $root->appendChild($Mensaje);
+         $PathAdvancing=$doc->createElement("PathAdvancing",dirname($archivo)."/Advancing_$KeyProcess.ini");
+         $root->appendChild($PathAdvancing);
+         $PathCancel=$doc->createElement("PathStatus",dirname($archivo)."/Status_$KeyProcess.ini");
+         $root->appendChild($PathCancel);
+         $XmlKeyProcess=$doc->createElement("KeyProcess",$KeyProcess);
+         $root->appendChild($XmlKeyProcess);
+         header ("Content-Type:text/xml");
+         echo $doc->saveXML();
+
+         */
+
+    }
+
     function ModifyDir($userData)
     {
         $db = new DataBase();

@@ -283,6 +283,7 @@ class DataBase {
                 . "UsuarioPublicador VARCHAR(50) NOT NULL,"
                 . "FechaIngreso DATETIME NOT NULL,"
                 . "Full TEXT CHARACTER SET latin1 COLLATE latin1_fulltext_ci NOT NULL,"
+                . "status BOOLEAN NOT NULL DEFAULT 1,"
                 . "PRIMARY KEY (IdGlobal),"
                 . "FULLTEXT (Full)"
                 . ")ENGINE = MYISAM DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci";
@@ -639,6 +640,7 @@ class DataBase {
                     . "`parent_id` int(10) UNSIGNED NOT NULL DEFAULT '0',"
                     . "`title` varchar(255) NOT NULL,"
                     . "`path` varchar(255) NOT NULL DEFAULT '',"
+                    . "`status` BOOLEAN NOT NULL DEFAULT 1,"
                     . "PRIMARY KEY (`IdDirectory`)"
                     . ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8";
 
@@ -659,13 +661,9 @@ class DataBase {
             $tabla_repositorio = "CREATE TABLE IF NOT EXISTS $nombre_tabla "
                     . "(IdRepositorio INT NOT NULL AUTO_INCREMENT, "
                     . "IdDirectory INT NOT NULL,"
-                    . "IdEmpresa INT NOT NULL,";
-            $tabla_temporal_repositorio = "CREATE TABLE IF NOT EXISTS temp_rep_$nombre_tabla "
-                    . "(IdRepositorio INT NOT NULL, "
-                    . "IdDirectory INT NOT NULL,"
                     . "IdEmpresa INT NOT NULL,"
-                    . "IdUsuario INT NOT NULL,"
-                    . "NombreUsuario VARCHAR(50) NOT NULL,";
+                    . "status BOOLEAN NOT NULL DEFAULT 1,";
+
 
             /*             * ********** Se recorren los campos de Default ******************* */
             foreach ($DefaultEstruct as $estructura) {
@@ -680,14 +678,14 @@ class DataBase {
 
                 if ($estructura['long'] > 0) {
                     $tabla_repositorio.=$estructura->getName() . " " . $estructura['type'] . "(" . $estructura['long'] . ") $required, ";
-                    $tabla_temporal_repositorio.=$estructura->getName() . " " . $estructura['type'] . "(" . $estructura['long'] . ") $required, ";
+                    //$tabla_temporal_repositorio.=$estructura->getName() . " " . $estructura['type'] . "(" . $estructura['long'] . ") $required, ";
                 } else {
                     if (strcasecmp($estructura->getName(), "full") == 0) {
                         $tabla_repositorio.= $estructura->getName() . " " . $estructura['type'] . " CHARACTER SET latin1 COLLATE latin1_fulltext_ci $required , ";
-                        $tabla_temporal_repositorio.= $estructura->getName() . " " . $estructura['type'] . " CHARACTER SET latin1 COLLATE latin1_fulltext_ci $required , ";
+                        //$tabla_temporal_repositorio.= $estructura->getName() . " " . $estructura['type'] . " CHARACTER SET latin1 COLLATE latin1_fulltext_ci $required , ";
                     } else {
                         $tabla_repositorio.=$estructura->getName() . " " . $estructura['type'] . " $required , ";
-                        $tabla_temporal_repositorio.=$estructura->getName() . " " . $estructura['type'] . " $required , ";
+                        //$tabla_temporal_repositorio.=$estructura->getName() . " " . $estructura['type'] . " $required , ";
                     }
                 }
             }
@@ -707,9 +705,9 @@ class DataBase {
             $tabla_repositorio.= " PRIMARY KEY (`IdRepositorio`), FULLTEXT (FULL)"
                     . ") ENGINE = MYISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci";
 
-            $tabla_temporal_repositorio.=$properties . $NombresCatalogo;
-            $tabla_temporal_repositorio.="PRIMARY KEY (`IdRepositorio`), FULLTEXT (FULL)"
-                    . ") ENGINE = MYISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci";
+            //$tabla_temporal_repositorio.=$properties . $NombresCatalogo;
+            //$tabla_temporal_repositorio.="PRIMARY KEY (`IdRepositorio`), FULLTEXT (FULL)"
+            //        . ") ENGINE = MYISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci";
 
             /* Se busca que no exista el repositoria para registrarlo en la tabla de Repositorios */
             $query = "SELECT *FROM CSDocs_Repositorios WHERE NombreRepositorio='$nombre_tabla'";
@@ -741,8 +739,8 @@ class DataBase {
                     $ResultTablaTempDir = $this->crear_tabla($DataBaseName, $tabla_temporal_directorio);
                     $this->SalidaLog("Error al crear Temporal Directorio $nombre_tabla", $ResultTablaTempDir, "Temporal Directorio $nombre_tabla creada con éxito");
 
-                    $ResultTablaTempRep = $this->crear_tabla($DataBaseName, $tabla_temporal_repositorio);
-                    $this->SalidaLog("Error al crear Temporal Repositorio $nombre_tabla", $ResultTablaTempRep, "Temporal Repositorio $nombre_tabla creada con éxito");
+//                    $ResultTablaTempRep = $this->crear_tabla($DataBaseName, $tabla_temporal_repositorio);
+//                    $this->SalidaLog("Error al crear Temporal Repositorio $nombre_tabla", $ResultTablaTempRep, "Temporal Repositorio $nombre_tabla creada con éxito");
                 }
                 else {
                     echo "<p>Error al Crear el Repositorio temporal $ResultTempDir";
