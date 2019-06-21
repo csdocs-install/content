@@ -204,56 +204,22 @@ function BuildDeletedTableDirectories(xml)
         $(this).toggleClass('selected');
     } );
 
-    var Directory = $(xml).find("Directory");
-    for(var i=0; i<Directory.length;i++){
-        var Title=Directory.find("title")[i].childNodes[0].nodeValue;
-        var IdParent =Directory.find("IdParent")[i].childNodes[0].nodeValue;
-        var IdDirectory =Directory.find("IdDirectory")[i].childNodes[0].nodeValue;
-        var img = 0;
 
-        for (var j=0; j<Directory.length;j++){
-            var comp =  Directory.find("IdDirectory")[j].childNodes[0].nodeValue;
-            var Title2=Directory.find("title")[j].childNodes[0].nodeValue;
-
-            if (comp==IdParent){
-                img='<center><img src="img/DirectorioDesabled.png"></center>';
-            }else{
-                img='<center><img src="img/DirectorioEnable.png"></center>';
-            }
-        }
-          // console.log(Directory[0].getElementsByTagName("title")[0].childNodes[0].nodeValue);
-    }
-    /*$(xml).find("Directory").each(function()
+    $(xml).find("Directory").each(function()
     {
         var $Directory=$(this);
         var Title=$Directory.find("title").text();
         var IdParent =$Directory.find("IdParent").text();
         var IdDirectory =$Directory.find("IdDirectory").text();
-        var img = 0;
+        var IdEmpresa = $Directory.find("IdEmpresa").text();
 
-        for (var i=0; i<$Directory.length; i++){
-            var Directorio =$Directory.find("IdDirectory").text();
-            if(Directorio=IdParent) {
-                console.log(Directorio);
-            }
-        }
-        //if(Directorio=IdParent) {
-
-        //}
-
-
-        //if(!IdParent>0)IdParent=0;
-        var img = 0;
-        if(IdDirectory>IdParent)
         img='<center><img src="img/DirectorioEnable.png"></center>';
-        else
-        img='<center><img src="img/DirectorioDesabled.png"></center>';
-        
         var data = [
             '<img src="img/Directorio.png" width="25px" height="25px" title="'+Title+'">'+Title,
             img, 
             IdParent,
-            Title
+            Title,
+            IdEmpresa
         ];
         
         var ai = Tabla.row.add(data);         
@@ -263,7 +229,7 @@ function BuildDeletedTableDirectories(xml)
         Tabla.draw();
         Tabla.columns.adjust().draw();
 
-    });*/
+    });
 }
 
 function BuildDeletedTableFiles(xml)
@@ -292,7 +258,9 @@ function BuildDeletedTableFiles(xml)
         var TipoDocumento =$File.find("TipoArchivo").text();
         var TitleDirectory = $File.find("title").text();
         var Estado        =$File.find("status").text()
+        var IdEmpresa   =$File.find("IdEmpresa").text();
         if(!IdDirectory>0)IdDirectory=0;
+
         
         var ColumnDirectory = '';   /* Icono de directorio y su nombre donde pertenece el documento. */
         if(Estado!="0"){ColumnDirectory = '<img src="img/DirectorioEnable.png" width="25px" height="25px" title="'+TitleDirectory+'">'+TitleDirectory;}
@@ -304,7 +272,8 @@ function BuildDeletedTableFiles(xml)
             ColumnDirectory,                                                                                   /* [2] */
             IdDirectory,                                                                                       /* [3] */
             NombreArchivo,                                                                                     /* [4] */
-            RutaArchivo                                                                                        /* [5] */            
+            RutaArchivo,
+            IdEmpresa
         ];
         
         var ai = Tabla.row.add(data);         
@@ -364,10 +333,12 @@ function RestoreTrashed()
             var position = TableTrash.fnGetPosition(this); 
             var IdParent=TableTrash.fnGetData(position)[2];
             var title = TableTrash.fnGetData(position)[3];
+            var IdEmpresa = TableTrash.fnGetData(position)[4];
             XmlRestore+='<Directory>\n\
                             <title>'+ title +'</title>\n\
                             <IdDirectory>'+ $(this).attr('id') +'</IdDirectory>\n\
                             <IdParent>' + IdParent + '</IdParent>\n\
+                            <IdEmpresa>' + IdEmpresa + '</IdEmpresa>\n\
                         </Directory>';
             if(!(IdParent>0)){Flag=1; Advertencia('<p>El directorio destino de uno o más elementos no existe, por favor seleccione manualmente la ruta destino.</p>'); return;}
         }    
@@ -377,10 +348,12 @@ function RestoreTrashed()
             var position = TableTrash.fnGetPosition(this); 
             var IdDirectory=TableTrash.fnGetData(position)[3];
             var NombreArchivo = TableTrash.fnGetData(position)[4];
+            var IdEmpresa = TableTrash.fnGetData(position)[6];
             XmlRestore+='<File>\n\
                             <NombreArchivo>'+ NombreArchivo +'</NombreArchivo>\n\
                             <IdRepositorio>'+ $(this).attr('id') +'</IdRepositorio>\n\
                             <IdDirectory>'+ IdDirectory +'</IdDirectory>\n\
+                            <IdEmpresa>'+ IdEmpresa +'</IdEmpresa>\n\
                         </File>';
             if(!(IdDirectory>0)){Flag=1; Advertencia('<p>El directorio destino de uno o más elementos no existe, por favor seleccione manualmente la ruta destino.</p>'); return;}
         }
@@ -750,10 +723,12 @@ function EmptyTrash()
             var position = TableTrash.fnGetPosition(this); 
             var IdParent=TableTrash.fnGetData(position)[2];
             var title = TableTrash.fnGetData(position)[3];
+            var IdEmpresa = TableTrash.fnGetData(position)[4];
             XmlRestore+='<Directory>\n\
                             <title>'+ title +'</title>\n\
                             <IdDirectory>'+ $(this).attr('id') +'</IdDirectory>\n\
                             <IdParent>' + IdParent + '</IdParent>\n\
+                            <IdEmpresa>' + IdEmpresa + '</IdEmpresa>\n\
                         </Directory>';
         }    
         
