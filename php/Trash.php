@@ -68,6 +68,7 @@ class Trash {
     
     private function DeleteDirectories()
     {
+        $BD= new DataBase();
         $XmlRestore = filter_input(INPUT_POST, 'XmlEmpty');
         $XML=new XML();
         $Fifo = new Fifo();
@@ -79,6 +80,55 @@ class Trash {
         $NombreUsuario=  filter_input(INPUT_POST, "nombre_usuario");                                        
         /* Se registra el proceso en Fifo y se crea el archivo con los elementos a borrar en 
          * RestoreTrash/DataBaseName/User/ */
+
+        $xml = simplexml_load_string($XmlRestore);
+        $Title=$xml->Directory->title;
+        $IdParent=$xml->Directory->IdParent;
+        $IdDirectory=$xml->Directory->IdDirectory;
+
+        $QueryDeleteDirectoryGlobal="DELETE FROM RepositorioGlobal WHERE IdRepositorio=$IdRepositorio AND NombreRepositorio='$NombreRepositorio' AND IdDirectory IN (select * from (select IdDirectory from dir_$NombreRepositorio , (select @pv := '$IdDirectory') initialisation where find_in_set(parent_id, @pv) and length(@pv := concat(@pv, ',', IdDirectory)) or IdDirectory=$IdDirectory) dirs)";
+        $deleteGlobal=$BD->ConsultaQuery($DataBaseName, $QueryDeleteDirectoryGlobal);
+        if($deleteGlobal==1){
+            $QueryDeleteDirectory="DELETE drb, rb FROM dir_$NombreRepositorio AS drb LEFT JOIN $NombreRepositorio AS rb USING(IdDirectory) WHERE drb.IdDirectory IN (select * from (select IdDirectory from dir_$NombreRepositorio , (select @pv := '$IdDirectory') initialisation where find_in_set(parent_id, @pv) and length(@pv := concat(@pv, ',', IdDirectory)) or IdDirectory=$IdDirectory) dirs)";
+            $delete=$BD->ConsultaQuery($DataBaseName, $QueryDeleteDirectory);
+
+            if($delete==1){
+                return $XML->ResponseXML("Delete", 0, "Directorio eliminado con éxito");
+            }else{
+                return $XML->ResponseXML("Error", 0, $delete);
+            }
+
+        }else{
+            return $XML->ResponseXML("Error", 0, $deleteGlobal);
+        }
+
+
+//         $XML->ResponseXML("Error", 0, "$Title - - $IdParent - - $IdDirectory -- $NombreRepositorio");
+//        $XML->ResponseXML("Success", 1, "Exito");
+
+
+/*
+        $QueryDeleteDirectory="UPDATE dir_$NombreRepositorio LEFT JOIN $NombreRepositorio ON dir_$NombreRepositorio.IdDirectory=$NombreRepositorio.IdDirectory
+                        SET dir_$NombreRepositorio.status=0,$NombreRepositorio.status=0
+                        WHERE dir_$NombreRepositorio.IdDirectory IN
+                        (SELECT * FROM (SELECT IdDirectory FROM dir_$NombreRepositorio , (SELECT @pv := '$IdDirectory') initialisation WHERE find_in_set(parent_id, @pv) and length(@pv := concat(@pv, ',', IdDirectory)) or IdDirectory=$IdDirectory) dirs)
+       ";
+        $delete = $BD->ConsultaQuery($DataBaseName, $QueryDeleteDirectory);
+        if($delete==1){
+            $QueryDeleteFileGlobal="UPDATE RepositorioGlobal SET status=0
+                                   WHERE IdEmpresa=$IdEmpresa AND IdRepositorio=$IdRepositorio AND IdDirectory
+                                   IN (SELECT * FROM (SELECT IdDirectory FROM dir_$NombreRepositorio , (SELECT @pv := '$IdDirectory') initialisation WHERE find_in_set(parent_id, @pv) and length(@pv := concat(@pv, ',', IdDirectory)) OR IdDirectory=$IdDirectory) dirs)
+                                    ";
+            $deleteFileGlobal=$BD->ConsultaQuery($DataBaseName, $QueryDeleteFileGlobal);
+            if ($deleteFileGlobal==1){
+                return XML::XMLReponse("ModifyDir", 1, "Modificado con éxito");
+                //Log::WriteEvent("19", $IdUsuario, $NombreUsuario, $NameDirectory);
+            }
+        }
+        return XML::XMLReponse ("Error", 0, "$delete");
+*/
+
+        /*
         $RutaFilesTrash="/volume1/web/Configuracion/EmptyTrash/$DataBaseName/$NombreUsuario";       
         
         if(!file_exists($RutaFilesTrash)){if(!mkdir($RutaFilesTrash, 0777, true)){$XML->ResponseXML("Error", 0, "No se pudo crear el directorio <b>EmptyTrash</p>"); return 0;}}
@@ -90,7 +140,7 @@ class Trash {
         $xml=  simplexml_load_string($XmlRestore);      
         
         $config=  fopen($archivo, "a+");
-        if(!($config)){$XML->ResponseXML("Error", 0, "Error al crear archivo de configuración."); return;}  /* Error al abrir y crear el archivo de config */                                                        
+        if(!($config)){$XML->ResponseXML("Error", 0, "Error al crear archivo de configuración."); return;}  // Error al abrir y crear el archivo de config
         
         fwrite($config, "; Listado de documentos a restaurar. ".PHP_EOL);
         fwrite($config, "[DeleteDirectories]".PHP_EOL);
@@ -101,14 +151,14 @@ class Trash {
         fwrite($config, "IdUsuario = $IdUsuario".PHP_EOL);    
         fwrite($config, "[Directories]".PHP_EOL);
         
-        /* Se registran los directorios padre del árbol a restaurar */        
+        // Se registran los directorios padre del árbol a restaurar
         foreach ($xml->Directory as $nodo)
         {
             fwrite($config, "$nodo->title=$nodo->IdDirectory".PHP_EOL);
         }
         fclose($config);
         
-        /* Se registra el proceso  */        
+        // Se registra el proceso
         $KeyProcess=$Fifo->AddToStack("DeleteDirectories", $NombreUsuario, $archivo);
         
         if(!$KeyProcess){$XML->ResponseXML("Error", 0, "No pudo ser registrado el proceso en Fifo"); return 0;}
@@ -123,14 +173,14 @@ class Trash {
         $RouteFileAdvancing=dirname($archivo)."/Advancing_$KeyProcess.ini";
 
         
-        /* Archivo de status del servicio (Permite deter el servicio ) */
+        // Archivo de status del servicio (Permite deter el servicio )
         if(!($FileProgress=fopen($RouteFileAdvancing, "a+"))){   echo "Error al crear archivo de Progress_$KeyProcess. ".$FileProgress.PHP_EOL;  return 0;}
         fwrite($FileProgress, "[Progress]".PHP_EOL);
         fwrite($FileProgress, "TotalDirectories=Calculando...".PHP_EOL);
         fclose($FileProgress);
         
         
-        /* Archivo de Progreso de la restauración */
+        // Archivo de Progreso de la restauración
         
         if(!($FileStatus=fopen($RouteFileStatus, "a+"))){   echo "Error al crear archivo de Status_$KeyProcess. ".$FileStatus.PHP_EOL;  return 0;}
         fwrite($FileStatus, "status=1");
@@ -154,6 +204,7 @@ class Trash {
         $root->appendChild($XmlKeyProcess);
         header ("Content-Type:text/xml");
         echo $doc->saveXML();
+        */
         
     }
     
@@ -562,6 +613,7 @@ class Trash {
     
     private function DeleteFiles()
     {
+        $BD= new DataBase();
         $XmlRestore = filter_input(INPUT_POST, 'XmlEmpty');
         $XML=new XML();
         $Fifo = new Fifo();
@@ -570,203 +622,34 @@ class Trash {
         $NombreRepositorio=  filter_input(INPUT_POST, "NombreRepositorio");
         $IdRepositorio=  filter_input(INPUT_POST, "IdRepositorio");
         $IdUsuario=filter_input(INPUT_POST, "IdUsuario");
-        $NombreUsuario=  filter_input(INPUT_POST, "nombre_usuario");                                        
-        /* Se registra el proceso en Fifo y se crea el archivo con los elementos a borrar en 
-         * RestoreTrash/DataBaseName/User/ */
-        $RutaFilesTrash="/volume1/web/Configuracion/EmptyTrash/$DataBaseName/$NombreUsuario";       
-        
-        if(!file_exists($RutaFilesTrash)){if(!mkdir($RutaFilesTrash, 0777, true)){$XML->ResponseXML("Error", 0, "No se pudo crear el directorio <b>EmptyTrash</p>"); return 0;}}
-        
-        $archivo="$RutaFilesTrash/DeleteFiles.ini";
-        
-        if(file_exists($archivo)){if(!unlink($archivo)){$XML->ResponseXML("Error", 0, "No se pudo eliminar el archivo de \"Eliminación Permanente\" anterior."); return 0;}}
-        
-        $xml=  simplexml_load_string($XmlRestore);      
-        
-        $config=  fopen($archivo, "a+");
-        if(!($config)){$XML->ResponseXML("Error", 0, "Error al crear archivo de configuración."); return;}  /* Error al abrir y crear el archivo de config */                                                        
-        
-        fwrite($config, "; Listado de documentos a eliminar permanentemente. ".PHP_EOL);
-        fwrite($config, "[DeleteFiles]".PHP_EOL);
-        fwrite($config, "DataBaseName=$DataBaseName".PHP_EOL);
-        fwrite($config, "NombreRepositorio=$NombreRepositorio".PHP_EOL);
-        fwrite($config, "IdRepositorio=$IdRepositorio".PHP_EOL);   
-        fwrite($config, "NombreUsuario=$NombreUsuario".PHP_EOL);   
-        fwrite($config, "IdUsuario=$IdUsuario".PHP_EOL);           
-        fwrite($config, "[Files]".PHP_EOL);
-        /* Se registran los directorios padre del árbol a restaurar */        
-        foreach ($xml->File as $nodo)
-        {
-            fwrite($config, "$nodo->NombreArchivo=$nodo->IdRepositorio###$nodo->RutaArchivo###$nodo->NombreArchivo".PHP_EOL);
+        $NombreUsuario=  filter_input(INPUT_POST, "nombre_usuario");
+
+        $xml = simplexml_load_string($XmlRestore);
+        foreach ($xml->File as $nodo){
+            $NombreArchivo=$nodo->NombreArchivo;
+            $IdFile=$nodo->IdRepositorio;
+            $IdDirectory=$nodo->IdDirectory;
+            $IdEmpresa=$nodo->IdEmpresa;
         }
-        fclose($config);
-        
-        /* Se registra el proceso  */        
-        $KeyProcess=$Fifo->AddToStack("DeleteFiles", $NombreUsuario, $archivo);
-        
-        if(!$KeyProcess){$XML->ResponseXML("Error", 0, "No pudo ser registrado el proceso en Fifo"); return 0;}
-        
-        $StartProcess=$Fifo->StartProcess($KeyProcess);
-        
-        if($StartProcess==0){$XML->ResponseXML("Error", 0, "No pudo inicializarse el proceso de borrado del directorio"); return 0;}
-        
-        rename($archivo, dirname($archivo)."/$KeyProcess.ini");
-        
-        $RouteFileStatus=dirname($archivo)."/Status_$KeyProcess.ini";
-        $RouteFileAdvancing=dirname($archivo)."/Advancing_$KeyProcess.ini";
 
-        
-        /* Archivo de status del servicio (Permite deter el servicio ) */
-        if(!($FileProgress=fopen($RouteFileAdvancing, "a+"))){   echo "Error al crear archivo de Progress_$KeyProcess. ".$FileProgress.PHP_EOL;  return 0;}
-        fwrite($FileProgress, "[Progress]".PHP_EOL);
-        fwrite($FileProgress, "TotalDirectories=Calculando...".PHP_EOL);
-        fclose($FileProgress);
-        
-        
-        /* Archivo de Progreso de la restauración */
-        
-        if(!($FileStatus=fopen($RouteFileStatus, "a+"))){   echo "Error al crear archivo de Status_$KeyProcess. ".$FileStatus.PHP_EOL;  return 0;}
-        fwrite($FileStatus, "status=1");
-        fclose($FileStatus);
-        
-//        $XML->ResponseXML("DeleteDir", 1, "<p>Iniciando Proceso de Borrado del directorio <b>$NameDirectory</b></p>");
-        $doc  = new DOMDocument('1.0','utf-8');
-        libxml_use_internal_errors(true);
-        $doc->formatOutput = true;
-        $root = $doc->createElement("DeleteDirectories");
-        $doc->appendChild($root); 
-        $Estado=$doc->createElement("Estado",1);
-        $root->appendChild($Estado);
-        $Mensaje=$doc->createElement("Mensaje","<p>Iniciando Proceso de Restauración.</p>");
-        $root->appendChild($Mensaje);
-        $PathAdvancing=$doc->createElement("PathAdvancing",dirname($archivo)."/Advancing_$KeyProcess.ini");
-        $root->appendChild($PathAdvancing);
-        $PathCancel=$doc->createElement("PathStatus",dirname($archivo)."/Status_$KeyProcess.ini");
-        $root->appendChild($PathCancel);
-        $XmlKeyProcess=$doc->createElement("KeyProcess",$KeyProcess);
-        $root->appendChild($XmlKeyProcess);
-        header ("Content-Type:text/xml");
-        echo $doc->saveXML();
-    }
-        
-    private function ServiceDeleteFiles()
-    {
-        $BD= new DataBase();
-        $Fifo= new Fifo();
-        $Log = new Log();
-        
-        $Parametros=$_SERVER['argv'];      
-        $KeyProcess=$Parametros[1];        
-        $Path=$Parametros[2];  
-        
-        $RouteFileStatus=dirname($Path)."/Status_$KeyProcess.ini";
-        $RouteFileAdvancing=dirname($Path)."/Advancing_$KeyProcess.ini";
-        
-        if(!file_exists($Path)){echo "No existe el archivo de registro de directorios a eliminar. ".PHP_EOL; return 0;}
-        
-        if(!($Delete=parse_ini_file ($Path,true))){echo "No pudo abrirse el archivo con la clave de proceso $KeyProcess.ini".PHP_EOL; return 0;}
-        
-        /* Variables de Repositorio y BD */
-        
-        $Files=$Delete['Files'];
-        $NombreRepositorio = $Delete['DeleteFiles']['NombreRepositorio'];
-        $DataBaseName = $Delete['DeleteFiles']['DataBaseName'];    
-        $NombreUsuario = $Delete['DeleteFiles']['NombreUsuario'];  
-        $IdUsuario = $Delete['DeleteFiles']['IdUsuario'];  
-//        $PathEstructura="/volume1/web/Estructuras/".$DataBaseName."/$NombreRepositorio";
-        $IdRepositorio=$Delete['DeleteFiles']['IdRepositorio'];
-        
-        if(!($FileAdvancing=  fopen($RouteFileAdvancing, "a+"))){  $FileAdvancing.PHP_EOL;  } else {
-            fwrite($FileAdvancing, "TotalFiles=".count($Files).PHP_EOL);
-            fclose($FileAdvancing);
-            }
-            
-        $AuxCont = 0;
-        foreach ($Files as $key => $value)
-        {
-            $AuxCont++;            
-            $Fila = explode("###", $value);
-            $IdFile = $Fila[0];
-//            $DividePath = explode("..", $Fila[1]);
-//            $RutaArchivo = "/volume1/web".$DividePath[1];
-            $RutaArchivo = $Fila[1];
-            $pathinfo = pathinfo($RutaArchivo);
-            $xml = $pathinfo['filename'].".xml";
-            $NombreArchivo = $Fila[2];
-            
-            $DeleteFromGlobal = "DELETE FROM RepositorioGlobal WHERE IdFile = $IdFile AND IdRepositorio = $IdRepositorio";
-            
-            if(!$this->CheckStatus($RouteFileStatus))
-                return 0;
-            
-            if($this->CheckIfDirectoryWasDeleted($Path, $IdFile))
-                    continue;
-            
-            if(!($FileAdvancing=  fopen($RouteFileAdvancing, "a+"))){  $FileAdvancing.PHP_EOL;  } else {
-            fwrite($FileAdvancing, "NumberFile=".$AuxCont.PHP_EOL);
-            fwrite($FileAdvancing, "TitleFile=".$NombreArchivo.PHP_EOL);
-            fclose($FileAdvancing);
-            }
-            
-//            echo "Buscando $RutaArchivo".PHP_EOL;
-            /* Se elimina el documento del Disco duro junto con su XML además de que se quita de la Papelera */
-            if(file_exists($RutaArchivo))
-            {
-                if(($UnlinkDocumento = unlink($RutaArchivo)))
-                {
-//                    echo "Intentando eliminar el xml ";
-                    if(file_exists($pathinfo['dirname']."/$xml"))
-                        if(!($UnlinkXml = unlink($pathinfo['dirname']."/$xml")))
-                            echo "Error al eliminar el XML del documento $NombreArchivo. $UnlinkXml".PHP_EOL;
-                    else
-                        "No existe el xml del documento $NombreArchivo".PHP_EOL;
-                    
-                    if(($ResultQuery = $BD->ConsultaQuery($DataBaseName, "DELETE FROM temp_rep_$NombreRepositorio WHERE IdRepositorio = $IdFile")))
-                    {                                
-                        if(($ResultDeleteFromGlobal = $BD->ConsultaQuery($DataBaseName, $DeleteFromGlobal))!=1)
-                                echo "Error al eliminar de Global a $NombreArchivo con id = $IdFile".$ResultDeleteFromGlobal.PHP_EOL.$DeleteFromGlobal.PHP_EOL;
+        $QueryDeleteFile="DELETE FROM $NombreRepositorio WHERE IdRepositorio=$IdFile AND status = 0";
+        $delete=$BD->ConsultaQuery($DataBaseName, $QueryDeleteFile);
 
-                        echo "Documento $NombreArchivo eliminado correctamente.".PHP_EOL;
-                        $this->RegisterFileAsDeleted($Path, $IdFile, $NombreArchivo);
+        if($delete==1){
+            $QueryDeleteFileGlobal="DELETE FROM RepositorioGlobal WHERE IdFile=$IdFile AND IdEmpresa=$IdEmpresa AND IdRepositorio=$IdRepositorio AND IdDirectory=$IdDirectory";
+            $deleteGlobal=$BD->ConsultaQuery($DataBaseName, $QueryDeleteFileGlobal);
 
-                        if(!($FileAdvancing=  fopen(dirname($RouteFileAdvancing)."/Ok_$KeyProcess.ini", "a+"))){  $FileAdvancing.PHP_EOL;  } else {
-                                fwrite($FileAdvancing, $IdFile."=".$NombreArchivo.PHP_EOL);
-                                fclose($FileAdvancing);
-                            }
-                    }
-                    else
-                        echo "Error al eliminar de la papelera el documento $NombreArchivo. $ResultQuery".PHP_EOL;
-                }
-                else
-                    echo "Error al eliminar el documento $NombreArchivo. $UnlinkDocumento".PHP_EOL;
-                
+            if($deleteGlobal==1){
+                $XML->ResponseXML("Delete", 0, "Archivo eliminado con éxito");
+            }else{
+                return $XML->ResponseXML("Error", 0, "No fue posible eliminar el archivo".$QueryDeleteFileGlobal);
             }
-            else
-                echo "No existe el documento $NombreArchivo".PHP_EOL;
-                        
-            $this->RegisterDirectoryAsDeleted($Path, $IdFile, $NombreArchivo);
-            $Log ->Write("26", $IdUsuario, $NombreUsuario, $NombreArchivo, $DataBaseName);
-            
-            sleep(1);
+        }else{
+            return $XML->ResponseXML("Error", 0, "No fue posible eliminar el archivo".$QueryDeleteFile);
         }
-        
-        
-        unlink($RouteFileStatus);      
-        if(file_exists(dirname($Path)."/Deleted_".  basename($Path))){unlink(dirname($Path)."/Deleted_".  basename($Path));}
-        unlink($Path);               
-//        unlink($RouteFileAdvancing);     
-        rename(dirname($Path)."/$KeyProcess.txt", dirname($Path)."/Ok_$KeyProcess.txt");
-        $Fifo->DeleteProcess($KeyProcess);
+
     }
-    
-    private function RegisterFileAsDeleted($Path,$IdDrectory,$title)
-    {        
-        $config = fopen(dirname($Path)."/Deleted_".  basename($Path), "a+");
-        /* Se reescribe la sección [Restored]. Consultar la descripción de esta función. */
-        fwrite($config, "$IdDrectory=$title".PHP_EOL);
-        fclose($config);
-    }
-    
+
     /*--------------------------------------------------------------------------
      *  Devuelve el listado de directorios que se movieron a la papelera.
      *  Únicamente se muestran los directorios padre
@@ -797,9 +680,6 @@ class Trash {
             
             $title = $doc->createElement("title",$ResultadoConsulta[$cont][2]);
             $Directory->appendChild($title);
-
-            $IdEmpresa = $doc->createElement("IdEmpresa",$ResultadoConsulta[$cont][3]);
-            $Directory->appendChild($IdEmpresa);
             
             $root->appendChild($Directory);                        
         }                
@@ -810,30 +690,13 @@ class Trash {
     
     private function getDirectoriesQuery($DataBaseName, $NombreRepositorio, $IdUsuario, $NombreUsuario){
         $BD= new DataBase();
-        $QueryDirectoriesTrashed="SELECT DISTINCT dir_$NombreRepositorio.parent_id, dir_$NombreRepositorio.IdDirectory, dir_$NombreRepositorio.title, RepositorioGlobal.IdEmpresa FROM dir_$NombreRepositorio LEFT JOIN RepositorioGlobal ON dir_$NombreRepositorio.IdDirectory = RepositorioGlobal.IdDirectory WHERE dir_$NombreRepositorio.status=0 AND dir_$NombreRepositorio.parent_id NOT IN(SELECT IdDirectory FROM dir_$NombreRepositorio WHERE status=0)";
-        /*
-        $QueryDirectoriesTrashed= 
-        "SELECT  dir_$NombreRepositorio.IdDirectory, "
-        . "temp_dir_$NombreRepositorio.IdDirectory, temp_dir_$NombreRepositorio.title, temp_dir_$NombreRepositorio.IdUsuario,"
-        . " temp_dir_$NombreRepositorio.NombreUsuario "
-        . "FROM temp_dir_$NombreRepositorio temp_dir_$NombreRepositorio LEFT JOIN dir_$NombreRepositorio dir_$NombreRepositorio "
-        . "ON dir_$NombreRepositorio.IdDirectory = temp_dir_$NombreRepositorio.parent_id "
-        . "  WHERE temp_dir_$NombreRepositorio.FlagFather = 1 AND temp_dir_$NombreRepositorio.IdUsuario = $IdUsuario";
-        */
+        $QueryDirectoriesTrashed="SELECT parent_id, IdDirectory, title FROM dir_$NombreRepositorio WHERE status=0 AND parent_id NOT IN(SELECT IdDirectory FROM dir_$NombreRepositorio WHERE status=0)";
+
         /* Los administradores pueden ver todos los elementos de la papelera */                
         if(strcasecmp($NombreUsuario, "root")==0)
         {
-            $QueryDirectoriesTrashed="SELECT DISTINCT dir_$NombreRepositorio.parent_id, dir_$NombreRepositorio.IdDirectory, dir_$NombreRepositorio.title, RepositorioGlobal.IdEmpresa FROM dir_$NombreRepositorio LEFT JOIN RepositorioGlobal ON dir_$NombreRepositorio.IdDirectory = RepositorioGlobal.IdDirectory WHERE dir_$NombreRepositorio.status=0 AND dir_$NombreRepositorio.parent_id NOT IN(SELECT IdDirectory FROM dir_$NombreRepositorio WHERE status=0)";
-            //SELECT DISTINCT dir_RepoBring.parent_id, dir_RepoBring.IdDirectory, dir_RepoBring.title, RepositorioGlobal.IdEmpresa FROM dir_RepoBring Left JOIN RepositorioGlobal ON dir_RepoBring.IdDirectory = RepositorioGlobal.IdDirectory WHERE dir_RepoBring.status=0 AND dir_RepoBring.parent_id NOT IN(SELECT IdDirectory FROM dir_RepoBring WHERE status=0)
-            /*
-            $QueryDirectoriesTrashed= 
-            "SELECT  dir_$NombreRepositorio.IdDirectory, "
-            . "temp_dir_$NombreRepositorio.IdDirectory, temp_dir_$NombreRepositorio.title, temp_dir_$NombreRepositorio.IdUsuario,"
-            . " temp_dir_$NombreRepositorio.NombreUsuario "
-            . "FROM temp_dir_$NombreRepositorio temp_dir_$NombreRepositorio LEFT JOIN dir_$NombreRepositorio dir_$NombreRepositorio "
-            . "ON dir_$NombreRepositorio.IdDirectory = temp_dir_$NombreRepositorio.parent_id "
-            . "  WHERE temp_dir_$NombreRepositorio.FlagFather = 1";
-            */
+            $QueryDirectoriesTrashed="SELECT parent_id, IdDirectory, title FROM dir_$NombreRepositorio WHERE status=0 AND parent_id NOT IN(SELECT IdDirectory FROM dir_$NombreRepositorio WHERE status=0)";
+
         }         
         
         $conexion = $BD->Conexion();
@@ -867,12 +730,10 @@ class Trash {
         $NombreUsuario=  filter_input(INPUT_POST, "nombre_usuario");
 
         $QueryGetFiles = "SELECT * FROM $NombreRepositorio INNER JOIN dir_$NombreRepositorio ON $NombreRepositorio.IdDirectory=dir_$NombreRepositorio.IdDirectory WHERE $NombreRepositorio.status=0";
-        //$QueryGetFiles = "SELECT dir.IdDirectory , dir.title, rep.IdRepositorio, rep.NombreArchivo, rep.RutaArchivo, rep.TipoArchivo, rep.IdUsuario, rep.NombreUsuario FROM temp_rep_$NombreRepositorio rep LEFT JOIN dir_$NombreRepositorio dir ON dir.IdDirectory = rep.IdDirectory AND rep.IdUsuario = $IdUsuario";
+
         if(strcasecmp($NombreUsuario, "root")==0)
         {
             $QueryGetFiles = "SELECT * FROM $NombreRepositorio INNER JOIN dir_$NombreRepositorio ON $NombreRepositorio.IdDirectory=dir_$NombreRepositorio.IdDirectory WHERE $NombreRepositorio.status=0";
-            //$QueryGetFiles = "SELECT dir.IdDirectory , dir.title, rep.IdRepositorio, rep.NombreArchivo, rep.RutaArchivo, rep.TipoArchivo FROM $NombreRepositorio rep LEFT JOIN dir_$NombreRepositorio dir ON dir.IdDirectory = rep.IdDirectory AND rep.status=0";
-            //  $QueryGetFiles = "SELECT dir.IdDirectory , dir.title, rep.IdRepositorio, rep.NombreArchivo, rep.RutaArchivo, rep.TipoArchivo, rep.IdUsuario, rep.NombreUsuario FROM temp_rep_$NombreRepositorio rep LEFT JOIN dir_$NombreRepositorio dir ON dir.IdDirectory = rep.IdDirectory";
 
 
         }
@@ -920,8 +781,8 @@ class Trash {
             if($restoreFileGlobal==1)
             {
                 //$Log->Write("27", $IdUsuario, $NombreUsuario, $Key, $DataBaseName);
-                Log::WriteEvent("25", $IdUsuario, $NombreUsuario, $File['ArrayDatos'][0]["NombreArchivo"], $DataBaseName);
-                return $XML->ResponseXML("Error", 0, "Archivo restaurado con exito.");
+                //Log::WriteEvent("25", $IdUsuario, $NombreUsuario, $File['ArrayDatos'][0]["NombreArchivo"], $DataBaseName);
+                return $XML->ResponseXML("Restore", 0, "Archivo restaurado con éxito.");
             }else {
                 return XML::XMLReponse("Error", 0, "No fue posible restaurar el archivo.".$restoreFileGlobal);
             }
@@ -930,91 +791,6 @@ class Trash {
         }
 
 
-
-        /* Empieza el codigo comentado
-
-        $RutaFilesTrash="$RoutFile/Configuracion/RestoreTrash/$DataBaseName/$NombreUsuario";
-        if(!file_exists($RutaFilesTrash))
-            if(!mkdir($RutaFilesTrash, 0777, true))
-                return XML::XMLReponse("Error", 0, "No se pudo crear el directorio <b>RestoreTrash</p>"); 
-        
-        $archivo="$RutaFilesTrash/RestoreFiles.ini";
-        
-        if(file_exists($archivo))
-            if(!unlink($archivo))
-                return XML::XMLReponse("Error", 0, "No se pudo eliminar el archivo de restauración anterior.");                
-        
-        $xml = simplexml_load_string($XmlRestore);      
-        $config = fopen($archivo, "a+");
-        
-        if(!($config))
-            return XML::XMLReponse("Error", 0, "Error al crear archivo de configuración."); /* Error al abrir y crear el archivo de config
-        
-        fwrite($config, "; Listado de documentos a restaurar. ".PHP_EOL);
-        fwrite($config, "[RestoreFiles]".PHP_EOL);
-        fwrite($config, "DataBaseName = $DataBaseName".PHP_EOL);
-        fwrite($config, "NombreRepositorio = $NombreRepositorio".PHP_EOL);
-        fwrite($config, "IdRepositorio = $IdRepositorio".PHP_EOL);   
-        fwrite($config, "NombreUsuario = $NombreUsuario".PHP_EOL);
-        fwrite($config, "IdUsuario = $IdUsuario".PHP_EOL);   
-        fwrite($config, "[Files]".PHP_EOL);
-        /* Se registran los directorios padre del árbol a restaurar
-        foreach ($xml->File as $nodo){
-            fwrite($config, "$nodo->NombreArchivo=$nodo->IdRepositorio".PHP_EOL);
-        }
-        
-        fclose($config);
-        
-        /* Se registra el proceso
-        $KeyProcess=$Fifo->AddToStack("RestoreFiles", $NombreUsuario, $archivo);
-        
-        if(!$KeyProcess)
-            return XML::XMLReponse("Error", 0, "No pudo ser registrado el proceso en Fifo");
-        
-        $StartProcess=$Fifo->StartProcess($KeyProcess);
-        
-        if($StartProcess==0)
-            return XML::XMLReponse("Error", 0, "No pudo inicializarse el proceso de borrado del directorio"); 
-        
-        rename($archivo, dirname($archivo)."/$KeyProcess.ini");
-        
-        $RouteFileStatus=dirname($archivo)."/Status_$KeyProcess.ini";
-        $RouteFileAdvancing=dirname($archivo)."/Advancing_$KeyProcess.ini";
-
-        /* Archivo de status del servicio (Permite deter el servicio )
-        if(!($FileProgress=fopen($RouteFileAdvancing, "a+"))){
-            echo "Error al crear archivo de Progress_$KeyProcess. ".$FileProgress.PHP_EOL;  
-            return 0;            
-        }
-        
-        fwrite($FileProgress, "[Progress]".PHP_EOL);
-        fwrite($FileProgress, "TotalFiles=Calculando...".PHP_EOL);
-        fclose($FileProgress);
-        
-        /* Archivo de Progreso de la restauración
-        if(!($FileStatus=fopen($RouteFileStatus, "a+"))){   echo "Error al crear archivo de Status_$KeyProcess. ".$FileStatus.PHP_EOL;  return 0;}
-        fwrite($FileStatus, "status=1");
-        fclose($FileStatus);
-        
-//        $XML->ResponseXML("DeleteDir", 1, "<p>Iniciando Proceso de Borrado del directorio <b>$NameDirectory</b></p>");
-        $doc  = new DOMDocument('1.0','utf-8');
-        libxml_use_internal_errors(true);
-        $doc->formatOutput = true;
-        $root = $doc->createElement("RestoreFiles");
-        $doc->appendChild($root); 
-        $Estado=$doc->createElement("Estado",1);
-        $root->appendChild($Estado);
-        $Mensaje=$doc->createElement("Mensaje","<p>Iniciando Proceso de Restauración.</p>");
-        $root->appendChild($Mensaje);
-        $PathAdvancing=$doc->createElement("PathAdvancing",dirname($archivo)."/Advancing_$KeyProcess.ini");
-        $root->appendChild($PathAdvancing);
-        $PathCancel=$doc->createElement("PathStatus",dirname($archivo)."/Status_$KeyProcess.ini");
-        $root->appendChild($PathCancel);
-        $XmlKeyProcess=$doc->createElement("KeyProcess",$KeyProcess);
-        $root->appendChild($XmlKeyProcess);
-        header ("Content-Type:text/xml");
-        echo $doc->saveXML();
-        */
 
     }
     
@@ -1387,7 +1163,6 @@ class Trash {
         $xml = simplexml_load_string($XmlRestore);
         foreach ($xml->Directory as $nodo){
             $IdDirectory=$nodo->IdDirectory;
-            $IdEmpresa=$nodo->IdEmpresa;
         }
 
 
@@ -1400,16 +1175,18 @@ class Trash {
         $restore = $BD->ConsultaQuery($DataBaseName, $QueryRestoreDirectory);
         if($restore==1){
             $QueryRestoreFileGlobal="UPDATE RepositorioGlobal SET status=1
-                                   WHERE IdEmpresa=$IdEmpresa AND IdRepositorio=$IdRepositorio AND IdDirectory
+                                   WHERE IdRepositorio=$IdRepositorio AND NombreRepositorio='$NombreRepositorio' AND IdDirectory
                                    IN (SELECT * FROM (SELECT IdDirectory FROM dir_$NombreRepositorio , (SELECT @pv := '$IdDirectory') initialisation WHERE find_in_set(parent_id, @pv) and length(@pv := concat(@pv, ',', IdDirectory)) OR IdDirectory=$IdDirectory) dirs)
                                     ";
             $restoreFileGlobal=$BD->ConsultaQuery($DataBaseName, $QueryRestoreFileGlobal);
             if ($restoreFileGlobal==1){
-                return XML::XMLReponse("ModifyDir", 1, "Modificado con éxito");
+                return XML::XMLReponse("Restore", 0, "Directorio restaurado con éxito");
                 //Log::WriteEvent("19", $IdUsuario, $NombreUsuario, $NameDirectory);
+            }else{
+                return XML::XMLReponse("Error", 0, "No fue posible restaurar el directorio".$restoreFileGlobal);
             }
         }
-        return XML::XMLReponse ("Error", 0, "$delete");
+        return XML::XMLReponse ("Error", 0, "No fue posible restaurar el directorio".$delete);
         
         /* Se registra el proceso en Fifo y se crea el archivo con los elementos a borrar en 
          * RestoreTrash/DataBaseName/User/ */

@@ -173,7 +173,7 @@ function ListDeleted()
           ($.parseXML( xml )===null) ? Salida(xml) : xml=$.parseXML( xml );          
             
             if(active===0){BuildDeletedTableDirectories(xml);}
-            if(active===1){BuildDeletedTableFiles(xml);}            
+             if(active===1){BuildDeletedTableFiles(xml);}
             
             $(xml).find("Error").each(function()
             {
@@ -181,7 +181,8 @@ function ListDeleted()
                 var estado=$Error.find("Estado").text();
                 var mensaje =$Error.find("Mensaje").text();
                 errorMessage(mensaje);
-            });                
+            });
+
       },
       beforeSend:function(){},
       error:function(objXMLHttpRequest){errorMessage(objXMLHttpRequest);}
@@ -211,7 +212,6 @@ function BuildDeletedTableDirectories(xml)
         var Title=$Directory.find("title").text();
         var IdParent =$Directory.find("IdParent").text();
         var IdDirectory =$Directory.find("IdDirectory").text();
-        var IdEmpresa = $Directory.find("IdEmpresa").text();
 
         img='<center><img src="img/DirectorioEnable.png"></center>';
         var data = [
@@ -219,7 +219,7 @@ function BuildDeletedTableDirectories(xml)
             img, 
             IdParent,
             Title,
-            IdEmpresa
+            // IdEmpresa
         ];
         
         var ai = Tabla.row.add(data);         
@@ -260,7 +260,6 @@ function BuildDeletedTableFiles(xml)
         var Estado        =$File.find("status").text()
         var IdEmpresa   =$File.find("IdEmpresa").text();
         if(!IdDirectory>0)IdDirectory=0;
-
         
         var ColumnDirectory = '';   /* Icono de directorio y su nombre donde pertenece el documento. */
         if(Estado!="0"){ColumnDirectory = '<img src="img/DirectorioEnable.png" width="25px" height="25px" title="'+TitleDirectory+'">'+TitleDirectory;}
@@ -333,12 +332,11 @@ function RestoreTrashed()
             var position = TableTrash.fnGetPosition(this); 
             var IdParent=TableTrash.fnGetData(position)[2];
             var title = TableTrash.fnGetData(position)[3];
-            var IdEmpresa = TableTrash.fnGetData(position)[4];
+            // var IdEmpresa = TableTrash.fnGetData(position)[4];
             XmlRestore+='<Directory>\n\
                             <title>'+ title +'</title>\n\
                             <IdDirectory>'+ $(this).attr('id') +'</IdDirectory>\n\
                             <IdParent>' + IdParent + '</IdParent>\n\
-                            <IdEmpresa>' + IdEmpresa + '</IdEmpresa>\n\
                         </Directory>';
             if(!(IdParent>0)){Flag=1; Advertencia('<p>El directorio destino de uno o más elementos no existe, por favor seleccione manualmente la ruta destino.</p>'); return;}
         }    
@@ -426,7 +424,17 @@ function RestoreTrashed()
                 var estado=$Error.find("Estado").text();
                 var mensaje =$Error.find("Mensaje").text();
                 errorMessage(mensaje);
-            });                
+            });
+
+          $(xml).find("Restore").each(function()
+          {
+              var $Restore=$(this);
+              var estado=$Restore.find("Estado").text();
+              var mensaje =$Restore.find("Mensaje").text();
+              Notificacion(mensaje);
+              ListDeleted();
+          });
+
       },
       beforeSend:function(){},
       error:function(objXMLHttpRequest){errorMessage(objXMLHttpRequest);}
@@ -545,7 +553,6 @@ function ProgressRestoreDir(PathAdvancing,KeyProcess)
                 $('#'+KeyProcess).dialog('close');
                 errorMessage(mensaje);
                 clearInterval(Process[KeyProcess]);
-                ListDeleted();
             });       
             
             /* Cuando se detecte que el flujo de trabajo termino se cancelan las peticiones y se muestra el resultado */
@@ -723,12 +730,11 @@ function EmptyTrash()
             var position = TableTrash.fnGetPosition(this); 
             var IdParent=TableTrash.fnGetData(position)[2];
             var title = TableTrash.fnGetData(position)[3];
-            var IdEmpresa = TableTrash.fnGetData(position)[4];
+            // var IdEmpresa = TableTrash.fnGetData(position)[4];
             XmlRestore+='<Directory>\n\
                             <title>'+ title +'</title>\n\
                             <IdDirectory>'+ $(this).attr('id') +'</IdDirectory>\n\
                             <IdParent>' + IdParent + '</IdParent>\n\
-                            <IdEmpresa>' + IdEmpresa + '</IdEmpresa>\n\
                         </Directory>';
         }    
         
@@ -738,11 +744,13 @@ function EmptyTrash()
             var IdDirectory=TableTrash.fnGetData(position)[3];
             var NombreArchivo = TableTrash.fnGetData(position)[4];
             var RutaArchivo = TableTrash.fnGetData(position)[5];
+            var IdEmpresa = TableTrash.fnGetData(position)[6];
             XmlRestore+='<File>\n\
                             <NombreArchivo>'+ NombreArchivo +'</NombreArchivo>\n\
                             <IdRepositorio>'+ $(this).attr('id') +'</IdRepositorio>\n\
                             <IdDirectory>'+ IdDirectory +'</IdDirectory>\n\
                             <RutaArchivo>'+ RutaArchivo +'</RutaArchivo>\n\
+                            <IdEmpresa>'+ IdEmpresa +'</IdEmpresa>\n\
                         </File>';
         }
         
@@ -813,7 +821,16 @@ function EmptyTrash()
                 var estado=$Error.find("Estado").text();
                 var mensaje =$Error.find("Mensaje").text();
                 errorMessage(mensaje);
-            });                
+            });
+
+          $(xml).find("Delete").each(function()
+          {
+              var $Delete=$(this);
+              var estado=$Delete.find("Estado").text();
+              var mensaje =$Delete.find("Mensaje").text();
+              Notificacion(mensaje);
+              ListDeleted();
+          });
       },
       beforeSend:function(){},
       error:function(objXMLHttpRequest){errorMessage(objXMLHttpRequest);}
