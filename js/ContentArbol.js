@@ -383,7 +383,9 @@ function InitDynatree(child)
 //                }
             },
             onClick: function(node, event){
-//                console.log(node.data.idParent);
+
+                //console.log(node.data.idParent);
+               node.sortChildren(cmp, false);
             },
             onDblClick: function(node, event) {
               editNode(node);
