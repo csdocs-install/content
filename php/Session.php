@@ -57,10 +57,16 @@ class Session {
             or !isset($_SESSION['idSession'])
             or !isset($_SESSION['idDataBase']))
             return null;
-        
-        return array('idSession' => $_SESSION['idSession'], "dataBaseName" => $_SESSION['dataBaseName'],
-            "userName" => $_SESSION['userName'], 'idUser' => $_SESSION['idUser'],
-            'idGroup' => $_SESSION['idGroup'], 'groupName' => $_SESSION['groupName']);
+
+        return array(
+            'idSession' => $_SESSION['idSession'],
+            "dataBaseName" => $_SESSION['dataBaseName'],
+            "userName" => $_SESSION['userName'],
+            'idUser' => $_SESSION['idUser'],
+            'idGroup' => $_SESSION['idGroup'],
+            'groupName' => $_SESSION['groupName'],
+            "idDataBase" => $_SESSION['idDataBase']
+        );
     }
 
     public static function getIdSession() {

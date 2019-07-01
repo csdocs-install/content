@@ -917,6 +917,11 @@ class DataBase {
         if (($result = $this->ConsultaQuery($dataBaseName, $users)) != 1)
             return $result;
 
+        $alterTable = "ALTER TABLE CSDocs_Usuarios AUTO_INCREMENT=10";
+
+        if (($resAlter = $this->ConsultaQuery($dataBaseName, $alterTable)) != 1)
+            return $resAlter;
+
         return 1;
     }
 
@@ -1456,6 +1461,8 @@ class DataBase {
     }
 
     public static function FieldFormat($FieldValue, $FieldType) {
+        $FieldType = trim($FieldType);
+
         if ((strcasecmp($FieldType, "varchar") == 0)) {
 //                $FieldValue_ = trim($FieldValue,'\'\t\n\r\0\x0B');
             $FormattedField = "'$FieldValue'";
@@ -1466,7 +1473,7 @@ class DataBase {
             if (strcasecmp(trim($FieldValue), "") == 0) /* cadena vacia */
                 return "''";
 //                $FormattedField = trim($FieldValue,'\'\t\n\r\0\x0B');
-            if (!is_numeric($FieldValue))
+            if (!is_numeric((int)$FieldValue))
                 return 0;
 
             return $FieldValue;
@@ -1476,8 +1483,9 @@ class DataBase {
             if (strcasecmp(trim($FieldValue), "") == 0) /* cadena vacia */
                 return 0;
 //                $FormattedField = trim($FieldValue,'\'\t\n\r\0\x0B');
-            if (!is_numeric($FieldValue))
+            if (!is_numeric((int)$FieldValue)) {
                 return 0;
+            }
 
             return $FieldValue;
         }
@@ -1486,7 +1494,7 @@ class DataBase {
             if (strcasecmp(trim($FieldValue), "") == 0) /* cadena vacia */
                 return 0;
 //                $FormattedField = trim($FieldValue,'\'\t\n\r\0\x0B');
-            if (!is_numeric($FieldValue))
+            if (!is_numeric((int)$FieldValue))
                 return 0;
 
             return $FieldValue;
@@ -1496,7 +1504,7 @@ class DataBase {
             if (strcasecmp(trim($FieldValue), "") == 0) /* cadena vacia */
                 return 0;
 //                $FormattedField = trim($FieldValue,'\'\t\n\r\0\x0B');
-            if (!is_numeric($FieldValue))
+            if (!is_numeric((int)$FieldValue))
                 return 0;
 
             return $FieldValue;
@@ -1504,17 +1512,21 @@ class DataBase {
 
         if (strcasecmp($FieldType, "date") == 0) {
 //                $FieldValue_ = trim($FieldValue,'\'\t\n\r\0\x0B');
-            $FormattedField = "'$FieldValue";
+            $FormattedField = "'$FieldValue'";
             return $FormattedField;
         }
 
         if (strcasecmp($FieldType, "text") == 0) {
 //                $FieldValue_ = trim($FieldValue,'\'\t\n\r\0\x0B');
+            if (strlen(trim($FieldValue)) == 0) /* cadena vacia */
+                return "' '";
+
             $FormattedField = "'$FieldValue'";
+
             return $FormattedField;
         }
 
-        return "No se reconoce el tipo de dato  FieldFormat::";
+        return null;
     }
 
 }
