@@ -282,40 +282,47 @@ function CM_getTree()
     if(!(parseInt(IdRepositorio) > 0))
         return Advertencia("El id del repositorio no es válido");;
         
-    $.ajax({
-        async:false, 
-        cache:false,
-        dataType:"html", 
-        type: 'POST',   
-        url: "php/Tree.php",
-        data: "opcion=getTree"+'&NombreRepositorio='+NombreRepositorio,
-        success:  function(xml)
-        {     
-            if($.parseXML( xml )===null)
-                return Salida(xml);
-            else 
-                xml = $.parseXML( xml );         
-                
-           if($(xml).find("Tree").length > 0)
-               _buildTree(xml);
-                           
-            $(xml).find("Error").each(function()
-            {
-                var mensaje = $(this).find("Mensaje").text();
-                errorMessage(mensaje);
-            });                   
+    var nodes = getNodes(0, NombreRepositorio);
 
+    _buildTree(nodes, NombreRepositorio);
+    
+    return status;
+}
+
+/**
+ *
+ * @param idDirectory
+ * @param NombreRepositorio
+ * @returns {Array}
+ */
+function getNodes(idDirectory, NombreRepositorio) {
+    var nodes = [];
+
+    $.ajax({
+        async:false,
+        cache:false,
+        dataType:"json",
+        type: 'POST',
+        url: "php/Tree.php",
+        data: {
+            opcion: "getTree",
+            NombreRepositorio: NombreRepositorio,
+            idDirectory: idDirectory
+        },
+        success:  function(response)
+        {
+            nodes = response;
         },
         beforeSend:function(){},
         error: function(jqXHR, textStatus, errorThrown){
             errorMessage(textStatus +"<br>"+ errorThrown);
         }
-    });    
-    
-    return status;
+    });
+
+    return nodes;
 }
 
-    var _buildTree = function(tree){        
+    var _buildTree = function(tree, NombreRepositorio){
         if($('#TreeRefresh').length === 0)
             $('<li id = "TreeRefresh" class = "fa fa-refresh fa-lg"></li>')
                 .css({"cursor": "pointer"})
@@ -330,50 +337,22 @@ function CM_getTree()
             $('#contentTree').empty();
         }
 
-        $(tree).find("Directory").each(function(){
-           var $Directory = $(this);
-           var id = $Directory.find("IdDirectory").text();
-           var title = $Directory.find("Title").text();
-           var idParent = $Directory.find("IdParent").text();
-           
-           var child = {
-               title: title,
-               idParent: idParent,
-               key: id,
-               isFolder: true
-           };
-           
-           if(cont===0)
-               InitDynatree(child);
-           else{ 
-                var parent = $("#contentTree").dynatree('getTree').getNodeByKey(idParent);
-                if(typeof parent === 'object' && parent !== null)
-                    parent.addChild(child);
-           }
+        InitDynatree(tree, NombreRepositorio);
 
-           cont++;                              
-        });    
-      
-        $('#TreeRefresh').click(function () {
-            if (!$(this).hasClass('fa-pulse')) {
-                $(this).addClass('fa-pulse');
-                CM_getTree();
-                $(this).removeClass('fa-pulse');
-            }
-        });
     };
 
-function InitDynatree(child)
+function InitDynatree(children, NombreRepositorio)
 {
-           
+    console.log(children);
     var isMac = /Mac/.test(navigator.platform);
     var arbol= $("#contentTree").dynatree(
         {
             generateIds: false,
             keyboard: true,
-            expand: true, 
-            minExpandLevel: 2,
-            children: [child],
+            expand: false,
+            minExpandLevel: 1,
+            clickFolderMode: 1,
+            children: children,
             onActivate: function(node) {
                 node.sortChildren(cmp, false);
                 GetFiles(node.data.key);                    
@@ -386,7 +365,7 @@ function InitDynatree(child)
 //                console.log(node.data.idParent);
             },
             onDblClick: function(node, event) {
-              editNode(node);
+              alert(node.data.title);
               return false;
             },
             onKeydown: function(node, event) {
@@ -400,7 +379,14 @@ function InitDynatree(child)
                   return false;
                 }
               }
-          }
+            },
+            onLazyRead: function(dtnode){
+                var newNodes = getNodes(dtnode.data.key, NombreRepositorio);
+
+                dtnode.append(newNodes);
+
+                dtnode.setLazyNodeStatus(DTNodeStatus_Ok);
+            }
         });
         
         $("#contentTree").dynatree("getTree").activateKey("1");

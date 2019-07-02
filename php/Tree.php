@@ -89,27 +89,77 @@ class Tree {
         echo $doc->saveXML();
     }
 /***************************************************************************/
-/***************************************************************************/    
-    
+/***************************************************************************/
+    /**
+     * @param $userData
+     */
     function get_tree($userData) 
     {
-        $DataBaseName = $userData['dataBaseName'];
-        $NombreRepositorio = filter_input(INPUT_POST, "NombreRepositorio");       
-        
-        $right = $this->getDirectoriesArray($DataBaseName, $NombreRepositorio);
-                       
-        if(!is_array($right))
-            return XML::XMLReponse ("Error", 0, "Error al intentar recuperar la estructura de directorios. $right");
-        
-        $this->returnTreeXML($right);
-                             
+        header('Content-type: application/json');
+
+        try {
+            $DataBaseName = $userData['dataBaseName'];
+            $NombreRepositorio = filter_input(INPUT_POST, "NombreRepositorio");
+            $parentId = filter_input(INPUT_POST, "idDirectory");
+
+            if(!is_numeric((int) $parentId) or !((int) $parentId > 0))
+                $parentId = 0;
+
+            $right = $this->getDirectoriesArray($DataBaseName, $NombreRepositorio, (int) $parentId);
+
+            if(!is_array($right))
+                return XML::XMLReponse ("Error", 0, "Error al intentar recuperar la estructura de directorios. $right");
+
+            $tree = $this->buildTree($right, [
+                'key'                   => 'key',
+                'parent_id_column_name' => 'parent_id',
+                'children_key_name' => 'children',
+                'id_column_name' => 'IdDirectory'
+            ], $parentId);
+
+            echo json_encode($tree);
+        } catch (Exception $e) {
+            header('HTTP/1.1 500 Internal Server Error');
+            $error = "Error al obtener directorios ".$e->getMessage();
+            echo json_encode($tree);
+        }
+
+    }
+
+    /**
+     * @param array $elements
+     * @param array $options
+     * @param int $parentId
+     * @return array
+     */
+    function buildTree(array $elements, $options = [
+        'key'                   => 'key',
+        'parent_id_column_name' => 'parent_id',
+        'children_key_name' => 'children',
+        'id_column_name' => 'IdDirectory'
+    ], $parentId = 0)
+    {
+        $branch = array();
+        foreach ($elements as $element) {
+            if ((int) $element[$options['parent_id_column_name']] == (int) $parentId) {
+                $element[$options['key']] = $element[$options['id_column_name']];
+                $element['isFolder'] = true;
+                $element['isLazy'] = true;
+                $children = $this->buildTree($elements, $options, $element[$options['id_column_name']]);
+                if ($children) {
+                    $element[$options['children_key_name']] = $children;
+                }
+                $branch[] = $element;
+            }
+        }
+        return $branch;
     }
     
-    function getDirectoriesArray($dataBaseName, $repositoryName){
+    function getDirectoriesArray($dataBaseName, $repositoryName, $idDirectory = 1){
         $DB = new DataBase();
 
-        $query = "SELECT IdDirectory, parent_id, title FROM dir_$repositoryName WHERE status=1";
-        
+        $query = "select dir_$repositoryName.* from dir_$repositoryName , (select @pv := '$idDirectory') initialisation where status = 1 AND find_in_set(parent_id, @pv) and length(1) or dir_$repositoryName.IdDirectory=$idDirectory";
+
         $queryResult = $DB->ConsultaSelect($dataBaseName, $query);
         
         if($queryResult['Estado']!=1)
