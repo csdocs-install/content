@@ -197,9 +197,9 @@ class Tree {
             $errors=libxml_get_errors();
             
             // Aquí se manejan los errores} 
-            for ($aux=0;$aux<count($errors); $aux++) {                
-                $Error.=$XML->display_xml_error($errors[$aux]);                
-            }
+            //for ($aux=0;$aux<count($errors); $aux++) {                
+              //  $Error.=$XML->display_xml_error($errors[$aux]);                
+            //}
             
             if(count($errors)>0){libxml_clear_errors();  /* Se limpia buffer de errores */continue;}
             else
