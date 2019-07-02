@@ -362,10 +362,9 @@ function InitDynatree(children, NombreRepositorio)
 //                }
             },
             onClick: function(node, event){
-//                console.log(node.data.idParent);
+
             },
             onDblClick: function(node, event) {
-              alert(node.data.title);
               return false;
             },
             onKeydown: function(node, event) {
@@ -384,6 +383,8 @@ function InitDynatree(children, NombreRepositorio)
                 var newNodes = getNodes(dtnode.data.key, NombreRepositorio);
 
                 dtnode.append(newNodes);
+
+                dtnode.sortChildren(cmp, false);
 
                 dtnode.setLazyNodeStatus(DTNodeStatus_Ok);
             }
