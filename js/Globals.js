@@ -173,7 +173,7 @@ function objetoAjax() {
 
 var GlobalDatePicker = {
 //    defaultDate: "+1w",
-//    dateFormat: 'yy-mm-dd',
+    dateFormat: 'yy-mm-dd',
 //    changeMonth: true,
 //    numberOfMonths: 3,
 //    isRTL: true,
@@ -193,7 +193,7 @@ $.datepicker.regional['es'] = {
     dayNamesShort: ['Dom', 'Lun', 'Mar', 'Mié', 'Juv', 'Vie', 'Sáb'],
     dayNamesMin: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'],
     weekHeader: 'Sm',
-    dateFormat: 'dd/mm/yy',
+    dateFormat: 'yy/mm/dd',
     firstDay: 1,
     isRTL: false,
     showMonthAfterYear: false,

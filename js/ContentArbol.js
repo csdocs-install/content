@@ -248,18 +248,9 @@ var ContentArbol = function(){
                     {
                         /* Se quita el directorio y se abre la barra de progreso */
                         $('.contentDetail').empty();
-                        node.remove();                    
-                        $('body').append('<div id ="'+KeyProcess+'"> <div id = "progress_'+KeyProcess+'"></div> <div id ="detail_'+KeyProcess+'"></div> </div>');
-                        $('#detail_'+KeyProcess).append('<div class="loading"><img src="../img/loadinfologin.gif"></div>');
-                        $('#'+KeyProcess).dialog({title:"Eliminando "+title, width:350, height:200, minWidth:350, minHeight:200,
-                        buttons:{"Cancelar":{click:function(){CancelDeleteDir(PathStatus,PathAdvancing);},text:"Cancelar"}},
-                        });
-                        $('#'+KeyProcess).dialog({ dialogClass: 'no-close' });
-                        $('#progress_'+KeyProcess).progressbar({ value: 0 });
-                        $('#detail_'+KeyProcess).append('<p>Obteniendo detalles de progreso</p>');   
-
-                        Process[KeyProcess]=setInterval("ProgressOfDeleting('"+PathAdvancing+"', '"+KeyProcess+"','"+title+"')", 2000);
-                    }                
+                        node.remove();
+                        Notificacion(mensaje);
+                    }
                 });
 
                 $(xml).find("Error").each(function()
@@ -291,40 +282,47 @@ function CM_getTree()
     if(!(parseInt(IdRepositorio) > 0))
         return Advertencia("El id del repositorio no es válido");;
         
-    $.ajax({
-        async:false, 
-        cache:false,
-        dataType:"html", 
-        type: 'POST',   
-        url: "php/Tree.php",
-        data: "opcion=getTree"+'&NombreRepositorio='+NombreRepositorio,
-        success:  function(xml)
-        {     
-            if($.parseXML( xml )===null)
-                return Salida(xml);
-            else 
-                xml = $.parseXML( xml );         
-                
-           if($(xml).find("Tree").length > 0)
-               _buildTree(xml);
-                           
-            $(xml).find("Error").each(function()
-            {
-                var mensaje = $(this).find("Mensaje").text();
-                errorMessage(mensaje);
-            });                   
+    var nodes = getNodes(0, NombreRepositorio);
 
+    _buildTree(nodes, NombreRepositorio);
+    
+    return status;
+}
+
+/**
+ *
+ * @param idDirectory
+ * @param NombreRepositorio
+ * @returns {Array}
+ */
+function getNodes(idDirectory, NombreRepositorio) {
+    var nodes = [];
+
+    $.ajax({
+        async:false,
+        cache:false,
+        dataType:"json",
+        type: 'POST',
+        url: "php/Tree.php",
+        data: {
+            opcion: "getTree",
+            NombreRepositorio: NombreRepositorio,
+            idDirectory: idDirectory
+        },
+        success:  function(response)
+        {
+            nodes = response;
         },
         beforeSend:function(){},
         error: function(jqXHR, textStatus, errorThrown){
             errorMessage(textStatus +"<br>"+ errorThrown);
         }
-    });    
-    
-    return status;
+    });
+
+    return nodes;
 }
 
-    var _buildTree = function(tree){        
+    var _buildTree = function(tree, NombreRepositorio){
         if($('#TreeRefresh').length === 0)
             $('<li id = "TreeRefresh" class = "fa fa-refresh fa-lg"></li>')
                 .css({"cursor": "pointer"})
@@ -339,50 +337,22 @@ function CM_getTree()
             $('#contentTree').empty();
         }
 
-        $(tree).find("Directory").each(function(){
-           var $Directory = $(this);
-           var id = $Directory.find("IdDirectory").text();
-           var title = $Directory.find("Title").text();
-           var idParent = $Directory.find("IdParent").text();
-           
-           var child = {
-               title: title,
-               idParent: idParent,
-               key: id,
-               isFolder: true
-           };
-           
-           if(cont===0)
-               InitDynatree(child);
-           else{ 
-                var parent = $("#contentTree").dynatree('getTree').getNodeByKey(idParent);
-                if(typeof parent === 'object' && parent !== null)
-                    parent.addChild(child);
-           }
+        InitDynatree(tree, NombreRepositorio);
 
-           cont++;                              
-        });    
-      
-        $('#TreeRefresh').click(function () {
-            if (!$(this).hasClass('fa-pulse')) {
-                $(this).addClass('fa-pulse');
-                CM_getTree();
-                $(this).removeClass('fa-pulse');
-            }
-        });
     };
 
-function InitDynatree(child)
+function InitDynatree(children, NombreRepositorio)
 {
-           
+    console.log(children);
     var isMac = /Mac/.test(navigator.platform);
     var arbol= $("#contentTree").dynatree(
         {
             generateIds: false,
             keyboard: true,
-            expand: true, 
-            minExpandLevel: 2,
-            children: [child],
+            expand: false,
+            minExpandLevel: 1,
+            clickFolderMode: 1,
+            children: children,
             onActivate: function(node) {
                 node.sortChildren(cmp, false);
                 GetFiles(node.data.key);                    
@@ -392,10 +362,9 @@ function InitDynatree(child)
 //                }
             },
             onClick: function(node, event){
-//                console.log(node.data.idParent);
+
             },
             onDblClick: function(node, event) {
-              editNode(node);
               return false;
             },
             onKeydown: function(node, event) {
@@ -409,7 +378,16 @@ function InitDynatree(child)
                   return false;
                 }
               }
-          }
+            },
+            onLazyRead: function(dtnode){
+                var newNodes = getNodes(dtnode.data.key, NombreRepositorio);
+
+                dtnode.append(newNodes);
+
+                dtnode.sortChildren(cmp, false);
+
+                dtnode.setLazyNodeStatus(DTNodeStatus_Ok);
+            }
         });
         
         $("#contentTree").dynatree("getTree").activateKey("1");
@@ -507,67 +485,6 @@ function CM_ModifyDir(IdDirectory,NameDirectory)
    };
 }
 
-/* Muestra el progreso del proceso de borrado */
-function ProgressOfDeleting(PathAdvancing,KeyProcess,title)
-{        
-    $.ajax({
-      async:true, 
-      cache:false,
-      dataType:"html", 
-      type: 'POST',   
-      url: "php/ServiceDeleteDirectory.php",
-      data: "opcion=CheckAdvancing&PathAdvancing="+PathAdvancing+'&KeyProcess='+KeyProcess, 
-      success:  function(xml){
-          $('.loading').remove();
-          ($.parseXML( xml )===null) ? $('#'+KeyProcess).dialog('close') : xml=$.parseXML( xml );
-           $(xml).find("Progress").each(function()
-            {                               
-                $('#detail_'+KeyProcess).empty();
-                var $Advancing=$(this);
-                var TotalDirectories=$Advancing.find("TotalDirectories").text();
-                var TitleDirectory=$Advancing.find("TitleDirectory").text();
-                var TitleFile=$Advancing.find("TitleFile").text();
-                var NumberDirectory=$Advancing.find("NumberDirectory").text();
-                
-                var TotalProgress=(NumberDirectory/TotalDirectories)*100;
-                $('#detail_'+KeyProcess).append('<p>Eliminando '+NumberDirectory+ " de "+TotalDirectories+" directorios</p>");
-                $('#detail_'+KeyProcess).append('<p>Procesando directorio: '+TitleDirectory+"</p>");
-                $('#detail_'+KeyProcess).append('<p>Documento : '+TitleFile+"</p>");
-                
-                /* Avance de la barra de progreso */
-                $('#progress_'+KeyProcess).progressbar({ value:TotalProgress});                                                
-            });
-            
-            $(xml).find("NotFound").each(function()
-            {               
-                var $Advancing=$(this);
-                var NotFound=$Advancing.find("NotFound").text();                
-                $('#'+KeyProcess).dialog('close');
-                clearInterval(Process[KeyProcess]);
-            });
-            
-            $(xml).find("Error").each(function()
-            {
-                var $Error=$(this);
-                var estado=$Error.find("Estado").text();
-                var mensaje =$Error.find("Mensaje").text();
-                $('#'+KeyProcess).dialog('close');
-                errorMessage(mensaje);
-                clearInterval(Process[KeyProcess]);
-            });         
-                        
-            if($(xml).find("Ok").length>0)
-            {
-                $('#'+KeyProcess).dialog('close');
-                clearInterval(Process[KeyProcess]);
-                Notificacion("Borrado de directorios","El usuario elimino el directorio: <br>"+title); 
-            }            
-      },
-      beforeSend:function(){},
-      error:function(objXMLHttpRequest){errorMessage(objXMLHttpRequest);$('#DeletePathAdvancing').dialog('close');clearInterval(Process[KeyProcess]);}
-    });
-}
-
 function CancelDeleteDir(PathStatus,PathAdvancing)
 {        
     $.ajax({
@@ -662,4 +579,3 @@ ClassTree.prototype.GetPath = function(IdTree)
     return PathArchivo;
 };
 
-   

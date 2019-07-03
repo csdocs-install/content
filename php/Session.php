@@ -49,13 +49,24 @@ class Session {
         if (!isset($_SESSION))
             session_start();
 
-        if(!isset($_SESSION['idSession']) or !isset($_SESSION['dataBaseName']) or !isset($_SESSION['userName'])
-                or !isset($_SESSION['idUser']) or !isset($_SESSION['idGroup']) or !isset($_SESSION['idSession']))
+        if(!isset($_SESSION['idSession'])
+            or !isset($_SESSION['dataBaseName'])
+            or !isset($_SESSION['userName'])
+            or !isset($_SESSION['idUser'])
+            or !isset($_SESSION['idGroup'])
+            or !isset($_SESSION['idSession'])
+            or !isset($_SESSION['idDataBase']))
             return null;
-        
-        return array('idSession' => $_SESSION['idSession'], "dataBaseName" => $_SESSION['dataBaseName'],
-            "userName" => $_SESSION['userName'], 'idUser' => $_SESSION['idUser'],
-            'idGroup' => $_SESSION['idGroup'], 'groupName' => $_SESSION['groupName']);
+
+        return array(
+            'idSession' => $_SESSION['idSession'],
+            "dataBaseName" => $_SESSION['dataBaseName'],
+            "userName" => $_SESSION['userName'],
+            'idUser' => $_SESSION['idUser'],
+            'idGroup' => $_SESSION['idGroup'],
+            'groupName' => $_SESSION['groupName'],
+            "idDataBase" => $_SESSION['idDataBase']
+        );
     }
 
     public static function getIdSession() {
