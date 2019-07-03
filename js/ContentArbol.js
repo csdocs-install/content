@@ -166,7 +166,6 @@ var ContentArbol = function(){
      * @constructor
      */
     var CM_DeleteDir = function(node) {
-        console.log("CM_DeleteDir");
         var status = 1;
 
         var NameDirectory   = node.data.title;
@@ -189,7 +188,7 @@ var ContentArbol = function(){
             return Advertencia("No fue posible obtener el identificador de la empresa");
 
         $.ajax({
-            async: false,
+            async: true,
             cache: false,
             dataType: "json",
             type: 'POST',
@@ -207,8 +206,8 @@ var ContentArbol = function(){
                 if (response.status) {
                     /* Se quita el directorio y se abre la barra de progreso */
                     $('.contentDetail').empty();
-                    node.remove();
                     Notificacion(response.message);
+                    node.remove();
 
                 } else {
                     errorMessage(response.message);
