@@ -142,14 +142,9 @@ var ContentArbol = function(){
                         dialogRef.enableButtons(false);
                         button.spin();
 
-                        if(CM_DeleteDir(node))
-                            dialogRef.close();
-                        else{
-                            button.stopSpin();
-                            dialogRef.setClosable(true);
-                            dialogRef.enableButtons(true);
-                        }
+                        CM_DeleteDir(node);
 
+                        dialogRef.close();
                     }
                 },
                 {
@@ -164,15 +159,20 @@ var ContentArbol = function(){
             }
         });
     };
-    
-    var CM_DeleteDir = function(node)
-    {
+    /**
+     *
+     * @param node
+     * @returns {number|void}
+     * @constructor
+     */
+    var CM_DeleteDir = function(node) {
+        console.log("CM_DeleteDir");
         var status = 1;
 
-        var NameDirectory = node.data.title;
-        var Path = node.getKeyPath();
-        var IdDirectory = node.data.key;
-        var IdParent_ = node.getParent().data.key;
+        var NameDirectory   = node.data.title;
+        var Path            = node.getKeyPath();
+        var IdDirectory     = node.data.key;
+        var IdParent_       = node.getParent().data.key;
 
         if(!(parseInt(IdParent_) > 0))
             return errorMessage("No se puede realizar esta acción sobre este elemento.");
@@ -188,80 +188,37 @@ var ContentArbol = function(){
         if(!parseInt(IdEmpresa) > 0)
             return Advertencia("No fue posible obtener el identificador de la empresa");
 
-        /* Se envia el listado de XML con cada uno de los Ids que seran eliminados (directorios) */
-        var XMLResponse="<Delete version='1.0' encoding='UTF-8'>";
-
-        var Bodyxml='';
-        var Children = node.getChildren();
-        var SubChildren = 0;
-
-
-        if(Children!==null)
-        {
-            for(var cont=0; cont<Children.length; cont++)
+        $.ajax({
+            async: false,
+            cache: false,
+            dataType: "json",
+            type: 'POST',
+            url: "php/Tree.php",
+            data: {
+                opcion: "DeleteDir",
+                idRepositorio: IdRepositorio,
+                idDirectory: IdDirectory,
+                dirName: node.data.title,
+                nombreRepositorio: NombreRepositorio,
+                idEmpresa: IdEmpresa
+            },
+            success:  function(response)
             {
-                SubChildren=Children[cont].getChildren();
-                if(SubChildren!==null)
-                {
-                    for(var aux=0; aux<SubChildren.length; aux++)
-                    {
-                        Children[Children.length]=SubChildren[aux];
-                    }
+                if (response.status) {
+                    /* Se quita el directorio y se abre la barra de progreso */
+                    $('.contentDetail').empty();
+                    node.remove();
+                    Notificacion(response.message);
+
+                } else {
+                    errorMessage(response.message);
                 }
-
-                var IdParent=Children[cont].getParent().data.key;
-                if(!(IdParent)>0){IdParent=0;}
-
-                Bodyxml+='<Directory>\n\
-                                <IdDirectory>'+Children[cont].data.key+'</IdDirectory>\n\
-                                <IdParent>'+IdParent+'</IdParent>\n\
-                                <title>'+Children[cont].data.title+'</title>\n\\n\
-                                <Path>'+Children[cont].getKeyPath()+'</Path>\n\
-                          </Directory>';              
-    //            Cadena+="<p>Nombre=" + Children[cont].data.title + " Id="+Children[cont].data.key+"</p>";            
-                SubChildren=null;
+            },
+            beforeSend:function(){},
+            error: function(jqXHR, textStatus, errorThrown){
+                errorMessage(textStatus +"<br>"+ errorThrown);
             }
-
-        }
-
-        XMLResponse+=Bodyxml+'</Delete>';
-
-        ajax=objetoAjax();
-        ajax.open("POST", 'php/Tree.php',true);
-        ajax.setRequestHeader("Content-Type", "application/x-www-form-urlencoded;charset=utf-8;");
-        ajax.send("opcion=DeleteDir&IdRepositorio="+IdRepositorio+"&DataBaseName="+EnvironmentData.DataBaseName+'&NombreRepositorio='+NombreRepositorio+"&IdDirectory="+IdDirectory+'&XMLResponse='+XMLResponse+'&IdEmpresa='+IdEmpresa+'&nombre_usuario='+EnvironmentData.NombreUsuario+'&NameDirectory='+NameDirectory+'&Path='+Path+'&title='+title+'&IdParent='+IdParent_+'&IdUsuario='+EnvironmentData.IdUsuario);
-        ajax.onreadystatechange=function() 
-        {
-           if (ajax.readyState===4 && ajax.status===200) 
-           {           
-              if(ajax.responseXML===null){Salida(ajax.responseText);return;}              
-               var xml = ajax.responseXML;
-               $(xml).find("DeleteDir").each(function()
-                {
-                    var $DeleteDir=$(this);
-                    var estado=$DeleteDir.find("Estado").text();
-                    var mensaje=$DeleteDir.find("Mensaje").text();
-                    var PathAdvancing=$DeleteDir.find("PathAdvancing").text();
-                    var PathStatus=$DeleteDir.find("PathStatus").text();
-                    var KeyProcess = $DeleteDir.find("KeyProcess").text();
-                    if(estado==="1")
-                    {
-                        /* Se quita el directorio y se abre la barra de progreso */
-                        $('.contentDetail').empty();
-                        node.remove();
-                        Notificacion(mensaje);
-                    }
-                });
-
-                $(xml).find("Error").each(function()
-                {
-                    var $Error=$(this);
-                    var estado=$Error.find("Estado").text();
-                    var mensaje=$Error.find("Mensaje").text();
-                    errorMessage(mensaje);
-                });            
-           }        
-       };
+        });
 
        return status;
     };
