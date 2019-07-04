@@ -76,14 +76,18 @@ class Trash {
         $Title=$xml->Directory->title;
         $IdParent=$xml->Directory->IdParent;
         $IdDirectory=$xml->Directory->IdDirectory;
+        $Path=$xml->Directory->Path;
+
+        $Route="../Estructuras/$DataBaseName/$NombreRepositorio".$Path.$IdDirectory;
 
         $QueryDeleteDirectoryGlobal="DELETE FROM RepositorioGlobal WHERE IdRepositorio=$IdRepositorio AND NombreRepositorio='$NombreRepositorio' AND IdDirectory IN (select * from (select IdDirectory from dir_$NombreRepositorio , (select @pv := '$IdDirectory') initialisation where find_in_set(parent_id, @pv) and length(@pv := concat(@pv, ',', IdDirectory)) or IdDirectory=$IdDirectory) dirs)";
         $deleteGlobal=$BD->ConsultaQuery($DataBaseName, $QueryDeleteDirectoryGlobal);
         if($deleteGlobal==1){
             $QueryDeleteDirectory="DELETE drb, rb FROM dir_$NombreRepositorio AS drb LEFT JOIN $NombreRepositorio AS rb USING(IdDirectory) WHERE drb.IdDirectory IN (select * from (select IdDirectory from dir_$NombreRepositorio , (select @pv := '$IdDirectory') initialisation where find_in_set(parent_id, @pv) and length(@pv := concat(@pv, ',', IdDirectory)) or IdDirectory=$IdDirectory) dirs)";
             $delete=$BD->ConsultaQuery($DataBaseName, $QueryDeleteDirectory);
-
             if($delete==1){
+                $this->DeleteDirNas($Route);
+//                rmdir("$Route");
                 return $XML->ResponseXML("Delete", 0, "Directorio eliminado con éxito");
             }else{
                 return $XML->ResponseXML("Error", 0, $delete);
@@ -94,6 +98,17 @@ class Trash {
         }
 
 
+    }
+
+    private function DeleteDirNas($Path){
+        foreach(glob($Path . "/*") as $element){
+            if (is_dir($element)){
+                $this->DeleteDirNas($element);
+            }else{
+                unlink($element);
+            }
+        }
+        rmdir($Path);
     }
 
     /* Elimina permanentemente de la NAS los directorios seleccionados por el usuario */
@@ -347,12 +362,13 @@ class Trash {
         $NombreUsuario=  filter_input(INPUT_POST, "nombre_usuario");
 
         $xml = simplexml_load_string($XmlRestore);
-        foreach ($xml->File as $nodo){
-            $NombreArchivo=$nodo->NombreArchivo;
-            $IdFile=$nodo->IdRepositorio;
-            $IdDirectory=$nodo->IdDirectory;
-            $IdEmpresa=$nodo->IdEmpresa;
-        }
+
+            $NombreArchivo=$xml->File->NombreArchivo;
+            $IdFile=$xml->File->IdRepositorio;
+            $IdDirectory=$xml->File->IdDirectory;
+            $IdEmpresa=$xml->File->IdEmpresa;
+            $Path=$xml->File->RutaArchivo;
+
 
         $QueryDeleteFile="DELETE FROM $NombreRepositorio WHERE IdRepositorio=$IdFile AND status = 0";
         $delete=$BD->ConsultaQuery($DataBaseName, $QueryDeleteFile);
@@ -362,7 +378,8 @@ class Trash {
             $deleteGlobal=$BD->ConsultaQuery($DataBaseName, $QueryDeleteFileGlobal);
 
             if($deleteGlobal==1){
-                $XML->ResponseXML("Delete", 0, "Archivo eliminado con éxito");
+                unlink("$Path");
+                return $XML->ResponseXML("Delete", 0, "Archivo eliminado con éxito");
             }else{
                 return $XML->ResponseXML("Error", 0, "No fue posible eliminar el archivo".$QueryDeleteFileGlobal);
             }
@@ -403,6 +420,10 @@ class Trash {
             $title = $doc->createElement("title",$ResultadoConsulta[$cont][2]);
             $Directory->appendChild($title);
 
+            $Path = $doc->createElement("Path",$ResultadoConsulta[$cont][3]);
+            $Directory->appendChild($Path);
+
+
             $root->appendChild($Directory);
         }
         header ("Content-Type:text/xml");
@@ -412,12 +433,12 @@ class Trash {
 
     private function getDirectoriesQuery($DataBaseName, $NombreRepositorio, $IdUsuario, $NombreUsuario){
         $BD= new DataBase();
-        $QueryDirectoriesTrashed="SELECT parent_id, IdDirectory, title FROM dir_$NombreRepositorio WHERE status=0 AND parent_id NOT IN(SELECT IdDirectory FROM dir_$NombreRepositorio WHERE status=0)";
+        $QueryDirectoriesTrashed="SELECT parent_id, IdDirectory, title, path FROM dir_$NombreRepositorio WHERE status=0 AND parent_id NOT IN(SELECT IdDirectory FROM dir_$NombreRepositorio WHERE status=0)";
 
         /* Los administradores pueden ver todos los elementos de la papelera */
         if(strcasecmp($NombreUsuario, "root")==0)
         {
-            $QueryDirectoriesTrashed="SELECT parent_id, IdDirectory, title FROM dir_$NombreRepositorio WHERE status=0 AND parent_id NOT IN(SELECT IdDirectory FROM dir_$NombreRepositorio WHERE status=0)";
+            $QueryDirectoriesTrashed="SELECT parent_id, IdDirectory, title, path FROM dir_$NombreRepositorio WHERE status=0 AND parent_id NOT IN(SELECT IdDirectory FROM dir_$NombreRepositorio WHERE status=0)";
 
         }
 

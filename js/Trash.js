@@ -213,6 +213,7 @@ function BuildDeletedTableDirectories(xml)
         var Title=$Directory.find("title").text();
         var IdParent =$Directory.find("IdParent").text();
         var IdDirectory =$Directory.find("IdDirectory").text();
+        var Path = $Directory.find("Path").text();
 
         img='<center><img src="img/DirectorioEnable.png"></center>';
         var data = [
@@ -220,7 +221,7 @@ function BuildDeletedTableDirectories(xml)
             img,
             IdParent,
             Title,
-            // IdEmpresa
+            Path
         ];
 
         var ai = Tabla.row.add(data);
@@ -334,11 +335,11 @@ function RestoreTrashed()
             var position = TableTrash.fnGetPosition(this);
             var IdParent=TableTrash.fnGetData(position)[2];
             var title = TableTrash.fnGetData(position)[3];
-            // var IdEmpresa = TableTrash.fnGetData(position)[4];
+             var Path = TableTrash.fnGetData(position)[4];
             XmlRestore+='<Directory>\n\
                             <title>'+ title +'</title>\n\
                             <IdDirectory>'+ $(this).attr('id') +'</IdDirectory>\n\
-                            <IdParent>' + IdParent + '</IdParent>\n\
+                            <Path>' + Path + '</Path>\n\
                         </Directory>';
             if(!(IdParent>0)){Flag=1; Advertencia('<p>El directorio destino de uno o más elementos no existe, por favor seleccione manualmente la ruta destino.</p>'); return;}
         }
@@ -483,11 +484,12 @@ function EmptyTrash()
             var position = TableTrash.fnGetPosition(this);
             var IdParent=TableTrash.fnGetData(position)[2];
             var title = TableTrash.fnGetData(position)[3];
-            // var IdEmpresa = TableTrash.fnGetData(position)[4];
+            var Path = TableTrash.fnGetData(position)[4];
             XmlRestore+='<Directory>\n\
                             <title>'+ title +'</title>\n\
                             <IdDirectory>'+ $(this).attr('id') +'</IdDirectory>\n\
                             <IdParent>' + IdParent + '</IdParent>\n\
+                            <Path>' + Path + '</Path>\n\
                         </Directory>';
         }
 
