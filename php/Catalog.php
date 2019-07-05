@@ -24,7 +24,10 @@ if(!isset($_SESSION))
     session_start();
 
 class Catalog {
+    protected $db;
     public function __construct() {
+        $this->db = new DataBase();
+
         $this->Ajax();
     }
     
@@ -57,27 +60,40 @@ class Catalog {
      ***************************************************************************/
     
     private function buildNewCatalog($user){
-        $dataBaseName = $user['dataBaseName'];
-        $userName = $user['userName'];
-        $idUser = $user['idUser'];
-        $idRepository = filter_input(INPUT_POST, "idRepository");
-        
-        $xmlString = filter_input(INPUT_POST, "xml");
-        $errorMessage = 0;
-        if(!($xml = simplexml_load_string($xmlString))){
-            foreach(libxml_get_errors() as $error) {
-                $errorMessage.= $error->message;
-            }
-        }
-        
-        if($errorMessage != 0)
-            return XML::XMLReponse ("Error", 0, "El xml no se construyó correctamente.<br><br> $errorMessage");
+        try {
+            $dataBaseName = $user['dataBaseName'];
+            $userName = $user['userName'];
+            $idUser = $user['idUser'];
+            $idRepository = filter_input(INPUT_POST, "idRepository");
 
-        if(($result = $this->InsertCatalogIntoRepository($xml->CrearEstructuraCatalogo, $dataBaseName)) !=1)
-            return XML::XMLReponse ("Error", 0, "No pudo ser creado el repositorio");
-        else
-            XML::XMLReponse ("newCatalogBuilded", 1, "Catálogo construido correctamente");
-        
+            $xmlString = filter_input(INPUT_POST, "xml");
+            $errorMessage = 0;
+
+            if(!($xml = simplexml_load_string($xmlString))){
+                return XML::XMLReponse("XXML recibido invalido");
+            }
+
+            if ($this->checkIfCatalogExists($dataBaseName, $xml->CrearEstructuraCatalogo->NombreCatalogo))
+                return XML::XMLReponse ("Error", 0, "El catálogo ya existe");
+
+            if(($result = $this->InsertCatalogIntoRepository($xml->CrearEstructuraCatalogo, $dataBaseName)) !=1)
+                return XML::XMLReponse ("Error", 0, "No pudo ser creado el repositorio");
+            else
+                XML::XMLReponse ("newCatalogBuilded", 1, "Catálogo construido correctamente");
+        } catch (Exception $e) {
+            return XML::XMLReponse ("newCatalogBuilded", 1, "Ocurrio un error al construir el catálogo. ".$e->getMessage());
+        }
+    }
+
+    private function checkIfCatalogExists($databaseName,$catalogName) {
+        $query = "SELECT IdCatalogo FROM CSDocs_Catalogos WHERE NombreCatalogo = '$catalogName'";
+
+        $res = $this->db->ConsultaSelect($databaseName, $query);
+
+        if ($res['Estado'] != 1)
+            throw new Exception("<p><b>Error</b> al comprobar existencia de catálogo. ".$ResultExistGroup['Estado']."</p>");
+
+        return (count($res['ArrayDatos']) > 0) ? 1 : 0;
     }
     
     /***************************************************************************
@@ -402,22 +418,6 @@ class Catalog {
             $DB->ConsultaQuery($DataBaseName, $DeleteCatalog);
             echo  "<b>Error</b> al crear las relaciones del catálogo <b>$NombreCatalogo</b><br><br>Detalles:<br><br> $ResultAlterTable";
             return 0;
-        }
-        
-        $AlterTableTemp = "ALTER TABLE temp_rep_$NombreRepositorio ADD COLUMN $NombreCatalogo INT NOT NULL, ADD INDEX $NombreCatalogo ($NombreCatalogo) ";
-        
-        if(($ResultAlterTable = $DB->ConsultaQuery($DataBaseName, $AlterTableTemp))!=1){
-            $DropColumn = "ALTER TABLE $NombreRepositorio DROP COLUMN $NombreCatalogo";
-            if(($DropResult = $DB->ConsultaQuery($DataBaseName, $DropColumn))!=1){
-                echo "<p><b>Error</b> al integrar relación del nuevo catálogo en <b>temporal</b>. "
-                . "No fué posible integrar relación del nuevo catálogo al repositorio <b>$NombreRepositorio</b> "
-                . "<br>Detalles:<br><br>Operación 1: $ResultAlterTable. <br><br>Operación 2: $DropResult";
-                return 0;
-            }else{
-                echo "<p><b>Error</b> al agregar relación del catálogo '$NombreCatalogo' al repositorio "
-                        . "'$NombreRepositorio'</p><br>Detalles:<br><br>$ResultAlterTable";
-                return 0;
-            }
         }
         
         return 1;

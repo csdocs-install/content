@@ -362,9 +362,6 @@ class DesignerForms {
         
         foreach ($Structure as $key =>$Section)
         {
-            fwrite($gestor,";#############################################################################".PHP_EOL);
-            fwrite($gestor, ";--------  $key --------".PHP_EOL);
-            fwrite($gestor,";#############################################################################".PHP_EOL);
             fwrite($gestor, "$key=$key".PHP_EOL);
             for($cont = 0; $cont < count($Section); $cont++)
             {
@@ -401,9 +398,6 @@ class DesignerForms {
         
         foreach ($Structure as $key =>$Section)
         {
-            fwrite($gestor,";#############################################################################".PHP_EOL);
-            fwrite($gestor, ";--------  $key --------".PHP_EOL);
-            fwrite($gestor,";#############################################################################".PHP_EOL);
             fwrite($gestor, "$key=$key".PHP_EOL);
             for($cont = 0; $cont < count($Section); $cont++)
             {
@@ -434,9 +428,6 @@ class DesignerForms {
             {
                     if(strcasecmp($StructureName, $key)!=0)
                     {
-                        fwrite($gestor,";#############################################################################".PHP_EOL);
-                        fwrite($gestor, ";--------  $key --------".PHP_EOL);
-                        fwrite($gestor,";#############################################################################".PHP_EOL);
                         fwrite($gestor, "$key=$key".PHP_EOL);
                         for($cont = 0; $cont < count($Section); $cont++)
                         {

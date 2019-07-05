@@ -110,9 +110,6 @@ class Repository {
             return XML::XMLReponse("Error", 0, "<p><b>Error</b> al intentar abrir el registro de estructura de la instancia <b>$DataBaseName</b><br>Detalles:<br><br>$gestor");
 
         foreach ($Structure as $key => $Section) {
-            fwrite($gestor, ";#############################################################################" . PHP_EOL);
-            fwrite($gestor, ";--------  $key --------" . PHP_EOL);
-            fwrite($gestor, ";#############################################################################" . PHP_EOL);
             fwrite($gestor, "$key=$key" . PHP_EOL);
             for ($cont = 0; $cont < count($Section); $cont++) {
                 $property = explode("###", $Section[$cont]);

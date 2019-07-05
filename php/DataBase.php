@@ -644,18 +644,6 @@ class DataBase {
                     . "PRIMARY KEY (`IdDirectory`)"
                     . ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8";
 
-            $tabla_temporal_directorio = "CREATE TABLE IF NOT EXISTS temp_dir_$nombre_tabla "
-                    . "(`IdDirectory` int(11) NOT NULL,"
-                    . "`parent_id` int(10) UNSIGNED NOT NULL,"
-                    . "`FlagFather` int(10) UNSIGNED NOT NULL," /* Es el directorio padre de todos los subdirectorios que se eliminaron */
-                    . "`title` varchar(255) NOT NULL,"
-                    . "`path` varchar(255) NOT NULL DEFAULT '',"
-                    . "`IdUsuario` INT NOT NULL,"
-                    . "NombreUsuario VARCHAR(50) NOT NULL,"
-                    . "PRIMARY KEY (`IdDirectory`)"
-                    . ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8";
-
-
             /*             * **************************Campos del Repositorio************************* */
 
             $tabla_repositorio = "CREATE TABLE IF NOT EXISTS $nombre_tabla "
@@ -736,8 +724,6 @@ class DataBase {
 
                     $configStructure = array("TipoEstructura" => "Empresa", "DataBaseName" => $DataBaseName, "Atributos" => $atributos);
                     $this->WriteConfig($nombre_tabla, $configStructure);
-                    $ResultTablaTempDir = $this->crear_tabla($DataBaseName, $tabla_temporal_directorio);
-                    $this->SalidaLog("Error al crear Temporal Directorio $nombre_tabla", $ResultTablaTempDir, "Temporal Directorio $nombre_tabla creada con éxito");
 
 //                    $ResultTablaTempRep = $this->crear_tabla($DataBaseName, $tabla_temporal_repositorio);
 //                    $this->SalidaLog("Error al crear Temporal Repositorio $nombre_tabla", $ResultTablaTempRep, "Temporal Repositorio $nombre_tabla creada con éxito");
@@ -1258,9 +1244,6 @@ class DataBase {
         if (!($gestor = fopen("$RoutFile/Configuracion/" . $ArrayDatos['DataBaseName'] . ".ini", "a+")))
             return $gestor;
 
-        fwrite($gestor, ";#############################################################################" . PHP_EOL);
-        fwrite($gestor, ";--------- $Seccion ---------" . PHP_EOL);
-        fwrite($gestor, ";#############################################################################" . PHP_EOL);
         fwrite($gestor, "" . PHP_EOL);
         fwrite($gestor, "$Seccion=$Seccion" . PHP_EOL);
         for ($cont = 0; $cont < count($ArrayDatos['Atributos']); $cont++) {
@@ -1296,9 +1279,6 @@ class DataBase {
 
     function WriteConfigCatalogo($Seccion, $ArrayDatos) {
         $gestor = fopen("../Configuracion/" . $ArrayDatos['DataBaseName'] . ".ini", "a+");
-        fwrite($gestor, ";#############################################################################" . PHP_EOL);
-        fwrite($gestor, ";------------ $Seccion -----------" . PHP_EOL);
-        fwrite($gestor, ";#############################################################################" . PHP_EOL);
         fwrite($gestor, "" . PHP_EOL);
         fwrite($gestor, "$Seccion=$Seccion" . PHP_EOL);
 
