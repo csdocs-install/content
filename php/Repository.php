@@ -97,33 +97,8 @@ class Repository {
 //        $IdRepository = filter_input(INPUT_POST, "IdRepository");
         $RepositoryName = filter_input(INPUT_POST, "RepositoryName");
         $FieldName = filter_input(INPUT_POST, "FieldName");
-        $RoutFile = filter_input(INPUT_SERVER, "DOCUMENT_ROOT"); /* /var/services/web */
 
-
-        if (!file_exists("$RoutFile/Configuracion/$DataBaseName.ini"))
-            return XML::XMLReponse("Error", 0, "<p><b>Error</b> no existe el registro de estructura de la intsnaica <b>$DataBaseName</b></p>");
-
-        if (!($Structure = parse_ini_file("$RoutFile/Configuracion/$DataBaseName.ini")))
-            return XML::XmlArrayResponse("Error", 0, "<p><b>Error</b> al intentar abrir el registro de estructura de la instancia <b>$DataBaseName</b></p>");
-
-        if (!($gestor = fopen("$RoutFile/Configuracion/$DataBaseName.ini", "w")))
-            return XML::XMLReponse("Error", 0, "<p><b>Error</b> al intentar abrir el registro de estructura de la instancia <b>$DataBaseName</b><br>Detalles:<br><br>$gestor");
-
-        foreach ($Structure as $key => $Section) {
-            fwrite($gestor, "$key=$key" . PHP_EOL);
-            for ($cont = 0; $cont < count($Section); $cont++) {
-                $property = explode("###", $Section[$cont]);
-                if (strcasecmp($RepositoryName, $key) == 0)
-                    if (strcasecmp($property[0], "Properties") == 0) {
-                        $Field = explode(" ", $property[1]);
-                        if (strcasecmp($FieldName, $Field[1]) == 0)
-                            continue;
-                    }
-                fwrite($gestor, $key . "[]=" . $Section[$cont] . PHP_EOL);
-            }
-        }
-
-        fclose($gestor);
+        DesignerForms::DeleteField($DataBaseName, $RepositoryName, $FieldName);
 
         $AlterTable = "ALTER TABLE $RepositoryName DROP COLUMN $FieldName";
         if (($AlterTableResult = $DB->ConsultaQuery($DataBaseName, $AlterTable)) != 1)
@@ -164,16 +139,6 @@ class Repository {
 
         if (($AlterRes = $DB->ConsultaQuery($DataBaseName, $AlterTable)) != 1)
             return XML::XMLReponse("Error", 0, "<p><b>Error</b> al agregar el nuevo campo <b>$FieldName</b></p><br>Detalles:<br><br>$AlterRes");
-
-        $AlterTableTemp = "ALTER TABLE temp_rep_$RepositoryName ADD COLUMN $FieldName $FieldTypeMysql $Required";
-
-        if (($AlterRes = $DB->ConsultaQuery($DataBaseName, $AlterTableTemp)) != 1) {
-            $DropColumn = "ALTER TABLE $RepositoryName DROP COLUMN $FieldName";
-            if (($DropResult = $DB->ConsultaQuery($DataBaseName, $DropColumn)) != 1)
-                return XML::XMLReponse("Error", 0, "<p><b>Error</b> al agregar al registro de estructura el nuevo campo '$FieldName'. No fué posible eliminar la columna posteriormente, debe reportarlo a CSDocs</p><br>Detalles:<br><br>$DropResult");
-            else
-                return XML::XMLReponse("Error", 0, "<p><b>Error</b> al agregar el nuevo campo <b>$FieldName</b></p><br>Detalles:<br><br>$AlterRes");
-        }
 
         if (($AddField = DesignerForms::AddPropertyIntoStructureConfig($DataBaseName, $RepositoryName, $NewProperty)) != 1) {
             $DropColumn = "ALTER TABLE $RepositoryName DROP COLUMN $FieldName";

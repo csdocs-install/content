@@ -1244,8 +1244,8 @@ class DataBase {
         if (!($gestor = fopen("$RoutFile/Configuracion/" . $ArrayDatos['DataBaseName'] . ".ini", "a+")))
             return $gestor;
 
-        fwrite($gestor, "" . PHP_EOL);
-        fwrite($gestor, "$Seccion=$Seccion" . PHP_EOL);
+//        fwrite($gestor, "" . PHP_EOL);
+        fwrite($gestor, "$Seccion='$Seccion'" . PHP_EOL);
         for ($cont = 0; $cont < count($ArrayDatos['Atributos']); $cont++) {
             $valores = '';
 
@@ -1254,10 +1254,10 @@ class DataBase {
                 $valores.=$campo . " " . $valor . "###";
             }
 //            echo "<p>$valores</p>";
-            fwrite($gestor, "$Seccion" . "[]=" . $ArrayDatos['Atributos'][$cont]['Campo'] . "###$valores" . PHP_EOL);
+            fwrite($gestor, "$Seccion" . "[]='" . $ArrayDatos['Atributos'][$cont]['Campo'] . "###$valores'" . PHP_EOL);
         }
-        fwrite($gestor, "" . PHP_EOL);
-        fwrite($gestor, "" . PHP_EOL);
+//        fwrite($gestor, "" . PHP_EOL);
+//        fwrite($gestor, "" . PHP_EOL);
         fclose($gestor);
 
 //        var_dump( parse_ini_file ("../Configuracion/".$ArrayDatos['DataBaseName'].".ini"),true);
@@ -1279,24 +1279,23 @@ class DataBase {
 
     function WriteConfigCatalogo($Seccion, $ArrayDatos) {
         $gestor = fopen("../Configuracion/" . $ArrayDatos['DataBaseName'] . ".ini", "a+");
-        fwrite($gestor, "" . PHP_EOL);
-        fwrite($gestor, "$Seccion=$Seccion" . PHP_EOL);
+//        fwrite($gestor, "" . PHP_EOL);
+        fwrite($gestor, "$Seccion='$Seccion'" . PHP_EOL);
 
         $Estructura = $ArrayDatos['Estructura']['Struct'];
         $TipoCatalogo = $ArrayDatos['Estructura']['Tipo'];
         /* Se escribe en el archivo el tipo de list y su nombre que representa al catálogo */
-        fwrite($gestor, "$Seccion" . "[]=Tipo###$TipoCatalogo");
+        fwrite($gestor, "{$Seccion}[]='Tipo###$TipoCatalogo'" . PHP_EOL);
         $properties = $Estructura->children();
-        fwrite($gestor, "" . PHP_EOL);
         for ($cont = 0; $cont < count($properties); $cont++) {
             $valores = '';
             foreach ($properties[$cont]->attributes() as $campo => $valor) {
                 $valores.=$campo . " " . $valor . "###";
             }
-            fwrite($gestor, "$Seccion" . "[]=" . $properties[$cont]->getName() . "###$valores" . PHP_EOL);
+            fwrite($gestor, "$Seccion" . "[]='" . $properties[$cont]->getName() . "###$valores'" . PHP_EOL);
         }
-        fwrite($gestor, "" . PHP_EOL);
-        fwrite($gestor, "" . PHP_EOL);
+//        fwrite($gestor, "" . PHP_EOL);
+//        fwrite($gestor, "" . PHP_EOL);
         fclose($gestor);
     }
 

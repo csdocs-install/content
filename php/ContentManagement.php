@@ -85,18 +85,7 @@ class ContentManagement {
         
         if (!isset($_SESSION['permissions'][md5($IdRepositorio)]['b6d767d2f8ed5d21a44b0e5886680cb9']))
             return XML::XMLReponse ("Error", 0, 'No tiene permiso de realizar esta acción.');
-        
-        if(!file_exists("../Configuracion/$DataBaseName.ini"))
-            return XML::XMLReponse("Error", 0,"<p>No existe el archivo de configuración estructural.</p>");
-           
-        
-        if(!($EstructuraConfig = parse_ini_file ("../Configuracion/$DataBaseName.ini",true)))
-            return XML::XMLReponse ("Error", 0, "<b>Error</b> al abrir el archivo de configuración del repositorio <b>$NombreRepositorio</b><br><br>$EstructuraConfig");
 
-        $ArrayStructureDefault=$designer->ReturnStructureDefault($NombreRepositorio,$EstructuraConfig[$NombreRepositorio]);
-
-        $Full='';
-        
         $GetFile='SELECT *FROM '.$NombreRepositorio." WHERE IdRepositorio=$IdFile";
         
         $File = $this->db->ConsultaSelect($DataBaseName, $GetFile);
@@ -118,7 +107,7 @@ class ContentManagement {
             return XML::XMLReponse("Error", 0, "No fue posible eliminar el archivo.".$delete);
         }
     }
-    
+    /** TODO refactor this function */
     private function CutFile($userData)
     {
                       
@@ -358,8 +347,7 @@ class ContentManagement {
                 
                 
                 $ResultUpdate=$BD->ConsultaQuery($DataBaseName, $UpdateRuta);
-                if($ResultUpdate==1)
-                {
+                if($ResultUpdate==1) {
                     $Mensaje='';
                     if($renombrado==1)
                        $Mensaje= "Archivo Cortado y Renombrado a $NombreArchivo";
@@ -368,42 +356,40 @@ class ContentManagement {
                     
                     $UpdateRepositorioGlobal = "UPDATE RepositorioGlobal SET RutaArchivo='$RutaDestino$NombreArchivo', IdDirectory=$IdDirectory, NombreArchivo='$NombreArchivo' WHERE IdFile = $IdFile AND IdRepositorio = $IdRepositorio ";
                     
-                    if(($ResultUpdateGlobal=$BD->ConsultaQuery($DataBaseName, $UpdateRepositorioGlobal))==1)
-                    {                                               
-                        /*  Devolución de repuesta en XML */
-                        $doc  = new DOMDocument('1.0','utf-8');
-                        $doc->formatOutput = true;
-                        $root = $doc->createElement("Paste");
-                        $doc->appendChild($root); 
-                        $XmlNombreArchivo=$doc->createElement("NombreArchivo",$NombreArchivo);
-                        $root->appendChild($XmlNombreArchivo);
-                        $XmlFechaIngreso=$doc->createElement("FechaIngreso",$FechaIngreso);
-                        $root->appendChild($XmlFechaIngreso);
-                        $XmlTipoArchivo=$doc->createElement("TipoArchivo",$TipoArchivo);
-                        $root->appendChild($XmlTipoArchivo);
-                        $XmlRutaArchivo=$doc->createElement("RutaArchivo",$RutaDestino.$NombreArchivo);
-                        $root->appendChild($XmlRutaArchivo);
-                        $XmlFull=$doc->createElement("Full",$Full);
-                        $root->appendChild($XmlFull);
-                        $XmlIdRepositorio=$doc->createElement("IdRepositorio",$IdFile);
-                        $root->appendChild($XmlIdRepositorio);
-                        $XmlEstado=$doc->createElement("Estado",1);
-                        $root->appendChild($XmlEstado);
-                        $XmlMensaje=$doc->createElement("Mensaje",$Mensaje);
-                        $root->appendChild($XmlMensaje);
-                        header ("Content-Type:text/xml");
-                        echo $doc->saveXML();
-
-                        $Log ->Write("34", $IdUsuario, $NombreUsuario, " '$NombreArchivo' al directorio '$NombreDirectorio'", $DataBaseName);
+                    if(($ResultUpdateGlobal=$BD->ConsultaQuery($DataBaseName, $UpdateRepositorioGlobal))!=1) {
+                        rename($RutaDestino.$NombreArchivo,$RutaArchivo);/* Se regresa el documento a la ruta original */
+                        $CancelUpdate = "UPDATE $NombreRepositorio SET RutaArchivo='$RutaArchivo', IdDirectory=$IdDirectorioOrigen, NombreArchivo='".  basename($RutaArchivo) ."' WHERE IdRepositorio=$IdFile";
+                        $BD->ConsultaQuery($DataBaseName, $CancelUpdate);
+                        return $XML->ResponseXML("Error", 0, "Error al registrar el movimiento. ".$ResultUpdateGlobal);
                     }
+
+                    /*  Devolución de repuesta en XML */
+                    $doc  = new DOMDocument('1.0','utf-8');
+                    $doc->formatOutput = true;
+                    $root = $doc->createElement("Paste");
+                    $doc->appendChild($root);
+                    $XmlNombreArchivo=$doc->createElement("NombreArchivo",$NombreArchivo);
+                    $root->appendChild($XmlNombreArchivo);
+                    $XmlFechaIngreso=$doc->createElement("FechaIngreso",$FechaIngreso);
+                    $root->appendChild($XmlFechaIngreso);
+                    $XmlTipoArchivo=$doc->createElement("TipoArchivo",$TipoArchivo);
+                    $root->appendChild($XmlTipoArchivo);
+                    $XmlRutaArchivo=$doc->createElement("RutaArchivo",$RutaDestino.$NombreArchivo);
+                    $root->appendChild($XmlRutaArchivo);
+                    $XmlFull=$doc->createElement("Full",$Full);
+                    $root->appendChild($XmlFull);
+                    $XmlIdRepositorio=$doc->createElement("IdRepositorio",$IdFile);
+                    $root->appendChild($XmlIdRepositorio);
+                    $XmlEstado=$doc->createElement("Estado",1);
+                    $root->appendChild($XmlEstado);
+                    $XmlMensaje=$doc->createElement("Mensaje",$Mensaje);
+                    $root->appendChild($XmlMensaje);
+                    header ("Content-Type:text/xml");
+                    echo $doc->saveXML();
+
+                    $Log ->Write("34", $IdUsuario, $NombreUsuario, " '$NombreArchivo' al directorio '$NombreDirectorio'", $DataBaseName);
                 }
-                else
-                {
-                    rename($RutaDestino.$NombreArchivo,$RutaArchivo);/* Se regresa el documento a la ruta original */
-                    $CancelUpdate = "UPDATE $NombreRepositorio SET RutaArchivo='$RutaArchivo', IdDirectory=$IdDirectorioOrigen, NombreArchivo='".  basename($RutaArchivo) ."' WHERE IdRepositorio=$IdFile";
-                    $BD->ConsultaQuery($DataBaseName, $CancelUpdate);
-                    $XML->ResponseXML("Error", 0, "Error al registrar el movimiento. ".$ResultUpdateGlobal);
-                }
+
             }
             else
                 $XML->ResponseXML("Error", 0, "No fué posible mover el archivo a la ruta seleccionada.");
@@ -879,12 +865,9 @@ class ContentManagement {
         
         /* Se obtiene la lista de catálogos pertenecientes al repositorio 
        Y se prepara la consulta que devuelve el detalle de la información          */
-        
-        if(!file_exists("$RoutFile/Configuracion/$DataBaseName.ini"))
-            return XML::XMLReponse("Error", 0,"<p>No existe el archivo de configuración estructural.</p>");
-        
-        $EstructuraConfig = parse_ini_file ("../Configuracion/$DataBaseName.ini",true);
-        
+
+        $EstructuraConfig = $designer->getArrayStructureFile($DataBaseName);
+
         /* Estructura del repositorio */
         $EstructuraRepositorio=$designer->ReturnStructure($NombreRepositorio,$EstructuraConfig[$NombreRepositorio]);
         $ArrayStructureDefault=$designer->ReturnStructureDefault($NombreRepositorio,$EstructuraConfig[$NombreRepositorio]);

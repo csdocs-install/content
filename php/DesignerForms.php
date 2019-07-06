@@ -84,20 +84,49 @@ class DesignerForms {
             return XML::XMLReponse("Error", 0,"<p>No existe el registro de estructura para <b>$TypeStructure</b>, o puede que no se haya creado correctamente</p>");
     
     }
-    
-    public function getArrayStructureFile($dataBaseName){
-        
-        $RoutFile = dirname(getcwd());     
-        
-        $Estructura = array();
-        
-        if(!file_exists("$RoutFile/Configuracion/$dataBaseName.ini"))
-            return "No existe el archivo de configuración estructural.";
-        
-        if(($Estructura = parse_ini_file ("$RoutFile/Configuracion/$dataBaseName.ini",true))===FALSE)
-            return "Error al abrir el registro de estructura de la instancia $dataBaseName. Detalles: $Estructura";   
-        
-        return $Estructura;
+
+    /**
+     * @param $dataBaseName
+     * @return array|bool|string
+     */
+    public function getArrayStructureFile($dataBaseName) {
+        try {
+            $RoutFile = dirname(getcwd());
+
+            if(!file_exists("$RoutFile/Configuracion/$dataBaseName.ini"))
+                return "No existe el archivo de configuración estructural.";
+
+            $Estructura = file_get_contents ("$RoutFile/Configuracion/$dataBaseName.ini");
+            $ini_utf8     = iconv("ISO-8859-1", "UTF-8", $Estructura);
+            $ini_array    = parse_ini_string($ini_utf8, TRUE);
+
+            return $ini_array;
+        } catch (Exception $e) {
+            return "Error al abrir el registro de estructura de la instancia $dataBaseName. Detalles: ".$e->getMessage();
+        }
+
+    }
+
+    /**
+     * @param $dataBaseName
+     * @return array|bool|string
+     */
+    public static function getArrayStructure($dataBaseName) {
+        try {
+            $RoutFile = dirname(getcwd());
+
+            if(!file_exists("$RoutFile/Configuracion/$dataBaseName.ini"))
+                return "No existe el archivo de configuración estructural.";
+
+            $Estructura = file_get_contents ("$RoutFile/Configuracion/$dataBaseName.ini");
+            $ini_utf8     = iconv("ISO-8859-1", "UTF-8", $Estructura);
+            $ini_array    = parse_ini_string($ini_utf8, TRUE);
+
+            return $ini_array;
+        } catch (Exception $e) {
+            return "Error al abrir el registro de estructura de la instancia $dataBaseName. Detalles: ".$e->getMessage();
+        }
+
     }
     
     /* Devuelve la estrucutura por default y la definida por el usuario */
@@ -107,8 +136,7 @@ class DesignerForms {
         $TypeStructure = filter_input(INPUT_POST, "TypeStructure");
         $DataBaseName = $userData['dataBaseName'];
         $catalogo=0;
-        if(!file_exists("../Configuracion/$DataBaseName.ini")){$XML->ResponseXML("Error", 0,"<p>No existe el archivo de configuración estructural.</p>");return;}
-        $Estructura_=parse_ini_file ("../Configuracion/$DataBaseName.ini",true); 
+        $Estructura_= $this->getArrayStructureFile($DataBaseName);
         if(!array_key_exists($TypeStructure,$Estructura_))
         {
             $XML->ResponseXML("Error", 0,"<p>No existe el registro de estructura para $TypeStructure, o puede que no se haya creado correctamente</p>");
@@ -346,7 +374,7 @@ class DesignerForms {
         return $FieldDetail;
     }
     
-    /* Función que elimina del archivo de configuración un campo de  */
+    /* Función que elimina del archivo de configuración un campo de la estructura */
     public static function DeleteField($DataBaseName, $StructureName,  $FieldName)
     {
         $RoutFile = dirname(getcwd());        
@@ -354,15 +382,14 @@ class DesignerForms {
         if(!file_exists("$RoutFile/Configuracion/$DataBaseName.ini"))
             return XML::XMLReponse ("Error", 0, "<p><b>Error</b> no existe el registro de estructura de la intsnaica <b>$DataBaseName</b></p>");
         
-        if(!($Structure = parse_ini_file("$RoutFile/Configuracion/$DataBaseName.ini")))
-                return XML::XmlArrayResponse ("Error", 0, "<p><b>Error</b> al intentar abrir el registro de estructura de la instancia <b>$DataBaseName</b></p>");
-        
+        $Structure = self::getArrayStructure($DataBaseName);
+
         if(!($gestor = fopen("$RoutFile/Configuracion/$DataBaseName.ini", "w")))
                 return XML::XMLReponse("Error", 0, "<p><b>Error</b> al intentar abrir el registro de estructura de la instancia <b>$DataBaseName</b><br>Detalles:<br><br>$gestor");
         
         foreach ($Structure as $key =>$Section)
         {
-            fwrite($gestor, "$key=$key".PHP_EOL);
+            fwrite($gestor, "$key='$key'".PHP_EOL);
             for($cont = 0; $cont < count($Section); $cont++)
             {
                 $property = explode("###", $Section[$cont]);
@@ -373,7 +400,7 @@ class DesignerForms {
                         if(strcasecmp($FieldName, $Field[1])==0)
                             continue;
                     }
-                fwrite($gestor, $key."[]=".$Section[$cont].PHP_EOL);
+                fwrite($gestor, $key."[]='".$Section[$cont]."'".PHP_EOL);
             }
         }
         
@@ -384,13 +411,8 @@ class DesignerForms {
     
     public static function AddPropertyIntoStructureConfig($DataBaseName,$StructureName, $NewProperty)
     {
+        $Structure = self::getArrayStructure($DataBaseName);
 
-        if(!file_exists("../Configuracion/$DataBaseName.ini"))
-            return "No existe la estructura de configuración de $DataBaseName";
-        
-        if(!$Structure = parse_ini_file("../Configuracion/$DataBaseName.ini", true))
-                return "La estructura del archivo de configuración de $DataBaseName es incorrecta";
-        
         $Structure[$StructureName][] = $NewProperty;
         
         if(!($gestor = fopen("../Configuracion/$DataBaseName.ini", "w")))
@@ -398,10 +420,10 @@ class DesignerForms {
         
         foreach ($Structure as $key =>$Section)
         {
-            fwrite($gestor, "$key=$key".PHP_EOL);
+            fwrite($gestor, "$key='$key'".PHP_EOL);
             for($cont = 0; $cont < count($Section); $cont++)
             {
-                fwrite($gestor, $key."[]=".$Section[$cont].PHP_EOL);
+                fwrite($gestor, $key."[]='".$Section[$cont]."'".PHP_EOL);
             }
         }
         
@@ -413,25 +435,19 @@ class DesignerForms {
     /* Elimina una estructura completa p.e. un repositorio */
     public static function DeleteStructure($DataBaseName, $StructureName)
     {
-        $RoutFile = dirname(getcwd());        
-        
-        if(!file_exists("$RoutFile/Configuracion/$DataBaseName.ini"))
-            return XML::XMLReponse ("Error", 0, "<p><b>Error</b> no existe el registro de estructura de la intsnaica <b>$DataBaseName</b></p>");
-        
-        if(!($Structure = parse_ini_file("$RoutFile/Configuracion/$DataBaseName.ini")))
-                return XML::XmlArrayResponse ("Error", 0, "<p><b>Error</b> al intentar abrir el registro de estructura de la instancia <b>$DataBaseName</b></p>");
-        
+        $RoutFile = dirname(getcwd());
+
+        $Structure = self::getArrayStructure($DataBaseName);
+
         if(!($gestor = fopen("$RoutFile/Configuracion/$DataBaseName.ini", "w")))
                 return XML::XMLReponse("Error", 0, "<p><b>Error</b> al intentar abrir el registro de estructura de la instancia <b>$DataBaseName</b><br>Detalles:<br><br>$gestor");
         
-            foreach ($Structure as $key =>$Section)
-            {
-                    if(strcasecmp($StructureName, $key)!=0)
-                    {
-                        fwrite($gestor, "$key=$key".PHP_EOL);
+            foreach ($Structure as $key =>$Section) {
+                    if(strcasecmp($StructureName, $key) != 0) {
+                        fwrite($gestor, "$key='$key'".PHP_EOL);
                         for($cont = 0; $cont < count($Section); $cont++)
                         {
-                            fwrite($gestor, $key."[]=".$Section[$cont].PHP_EOL);
+                            fwrite($gestor, $key."[]='".$Section[$cont]."'".PHP_EOL);
                         }
                     }           
         }
