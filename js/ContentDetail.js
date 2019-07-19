@@ -295,7 +295,6 @@ function GetDetalle(Source, IdGlobal, IdFile)
    function ConfirmDetailModify(xml,DocumentEnvironment)
    {
        var idRepository = DocumentEnvironment.IdRepository;
-       
        if(!parseInt(idRepository) > 0)
            return Advertencia("No fue posible obtener el identificador del repositorio");
        
@@ -373,57 +372,31 @@ function DetailModify(XmlDetalle,DocumentEnvironment)
        XMLResponse+='</MetaDatas>';  
 
     $.ajax({
-    async:false, 
+    async:true,
     cache:false,
-    dataType:"html", 
+    dataType:"json",
     type: 'POST',   
     url: "php/ContentManagement.php",
-    data: 'opcion=DetailModify&'+'&IdRepositorio='+DocumentEnvironment.IdRepository+ '&IdEmpresa = '+DocumentEnvironment.IdEnterprise+ '&NombreEmpresa = '+ DocumentEnvironment.EnterpriseName +'&NombreRepositorio='+DocumentEnvironment.RepositoryName+"&IdFile="+DocumentEnvironment.IdFile+'&XMLResponse='+XMLResponse+'&NombreArchivo='+DocumentEnvironment.FileName+'&IdGlobal='+DocumentEnvironment.IdGlobal, 
-    success:  function(xml){
-        
-        $('#CMModifyDetail').remove();
-        
-        if($.parseXML( xml )===null){errorMessage(xml); return 0;}else xml=$.parseXML( xml );
+    //data: 'opcion=DetailModify&'+'&IdRepositorio='+DocumentEnvironment.IdRepository+ '&IdEmpresa = '+DocumentEnvironment.IdEnterprise+ '&NombreEmpresa = '+ DocumentEnvironment.EnterpriseName +'&NombreRepositorio='+DocumentEnvironment.RepositoryName+"&IdFile="+DocumentEnvironment.IdFile+'&XMLResponse='+XMLResponse+'&NombreArchivo='+DocumentEnvironment.FileName+'&IdGlobal='+DocumentEnvironment.IdGlobal,
+    data: {
+        opcion:'DetailModify',
+        IdRepositorio:DocumentEnvironment.IdRepository,
+        //IdEmpresa:DocumentEnvironment.IdEnterprise
+        //NombreEmpresa:DocumentEnvironment.EnterpriseName
+        NombreRepositorio:DocumentEnvironment.RepositoryName,
+        IdFile:DocumentEnvironment.IdFile,
+        NombreArchivo:DocumentEnvironment.FileName,
+        XMLResponse:XMLResponse,
+        IdGlobal:DocumentEnvironment.IdGlobal
+    },
+    success:  function(reponse){
+        if(reponse.status){
+            $('#CMModifyDetail').remove();
+            Notificacion(reponse.message);
 
-        $(xml).find("DetailModify").each(function()
-        {
-             var $DetailModify=$(this);
-             var FullText=$DetailModify.find("Full").text();
-
-            Notificacion("Datos Actualizados con éxito del documento "+DocumentEnvironment.FileName);
-
-            switch(active)
-            {
-                case 0:                                    
-                    $('#table_DetailResult tbody tr[id=' + DocumentEnvironment.IdFile + ']').each(function ()
-                    {
-                        var position = TableContentdT.fnGetPosition(this); // getting the clicked row position
-                        TableContentdT.fnUpdate([FullText],position,3,true);                    
-                    });
-
-                    break;
-
-                case 1:       
-
-                    $('#table_EngineResult tr.selected').each(function()
-                    {
-                        var position = TableEnginedT.fnGetPosition(this); // getting the clicked row position
-                        TableEnginedT.fnUpdate([FullText],position,5,true);                    
-                    });
-
-                  break;
-            }                                                       
-        });
-
-        $(xml).find("Error").each(function()
-        {
-            var $Instancias=$(this);
-            var estado=$Instancias.find("Estado").text();
-            var mensaje=$Instancias.find("Mensaje").text();
-            errorMessage(mensaje);
-            return;
-        });
-
+        }else {
+            errorMessage(reponse.message);
+        }
     },
     beforeSend:function(){},
     error: function(jqXHR, textStatus, errorThrown){$('#CMModifyDetail').remove();errorMessage(textStatus +"<br>"+ errorThrown);}

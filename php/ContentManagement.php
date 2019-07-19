@@ -723,119 +723,155 @@ class ContentManagement {
     }
     
     private function DetailModify($userData)
-    {                       
-        $Notes = new Notes();
-        
-        $DataBaseName = $userData['dataBaseName'];
-        $NombreRepositorio = filter_input(INPUT_POST, "NombreRepositorio");
-        $IdRepositorio = filter_input(INPUT_POST, "IdRepositorio");
-        $NombreUsuario = $userData['userName'];
-        $IdUsuario = $userData['idUser'];
-        $IdFile = filter_input(INPUT_POST, "IdFile");
-        $IdGlobal = filter_input(INPUT_POST, "IdGlobal");
-        $XMLResponse = filter_input(INPUT_POST, "XMLResponse");   
-        $NombreArchivo = filter_input(INPUT_POST,"NombreArchivo");
-        
-        if(!isset($_SESSION['permissions'][md5($IdRepositorio)]['3c59dc048e8850243be8079a5c74d079']))
-            return XML::XMLReponse('Error', 0, 'Modificar Metadatos del Documento:: No tiene permiso de realizar esta acción');
-        
-        
-        $xml =  simplexml_load_string($XMLResponse);  
-        
-        /* El IdGlobal cuando se modifica el detalle desde la búsqueda */
-        
-        $CadenaUpdate="UPDATE $NombreRepositorio SET ";
-        $FullText=''; /* Campo devuelto a la vista para insertarlo en la Tabla (Repositorio) */
-        $CampoFullText="";     /* Contiene el resumen de todos los campos del repositorio y de los catálogos (Para la búsqueda) */
-        $campoFullReturn='';/* Campo FullText que se retorna a la vista de usuario */
-        
-        foreach ($xml->Detalle as $campo){
-            $type=$campo->type;
-            $value=$campo->value;
-            
-            if(strcasecmp($campo->name,"Full")==0)
-                    continue;
-            
-            if(strcasecmp($campo->name,"RutaArchivo")==0)
-                    continue;
-            
-            if(strcasecmp($type,"int")==0 or strcasecmp($type,"integer")==0 or strcasecmp($type,"float")==0 or strcasecmp($type,"double")==0) /* Si detecta un tipo numerico */{
-                if(!(is_numeric("$value")))
-                    $CadenaUpdate.=$campo->name."=0,";
-                else
-                    $CadenaUpdate.=$campo->name."=$campo->value,";
+    {
+        header('Content-type: application/json');
+        try{
+            $Notes = new Notes();
 
-            }
-            else    /* Demás tipos de datos llevan ' ' */
-                $CadenaUpdate.=$campo->name."='".$campo->value."'".",";
-            
-            if($campo->value!='0'){    /* Se evitan los campos por default que contengan 0 */
-                 $CampoFullText.=$value." , ";
-                 $campoFullReturn.=$value." , ";
-             }  
-        }
-        
-        if(count($xml->Catalogo)>0)    /* Los campos catálogo son tipo INT */
-            foreach ($xml->Catalogo as $campo){
-                $CadenaUpdate.=$campo->name."=$campo->value,";
-                $CampoFullText.=$campo->TextoSelect." , ";
-                $campoFullReturn.=$campo->TextoSelect." , ";
-            }
-        
-        $CadenaUpdate=trim($CadenaUpdate,',');
-        
-        $CampoFullText=  trim($CampoFullText,' , ');
-      
-        $campoFullReturn=  trim($campoFullReturn,' , ');
-        
-        
-        $notes = $Notes->getNotesArray($DataBaseName, $IdRepositorio, $IdFile);
-        
-        if(!is_array($notes))
-            return XML::XMLReponse ("Error", 0, $notes);
-        
-        $NewsNotesFields = '';
-        for($cont = 0; $cont < count($notes); $cont++)
-        {
-            $NewsNotesFields.= "||Nota|| ".$notes[$cont]['IdNote'].", ".$notes[$cont]['Page'].", ".$notes[$cont]['Text']." ";
-        }
+            $DataBaseName = $userData['dataBaseName'];
+            $NombreRepositorio = filter_input(INPUT_POST, "NombreRepositorio");
+            $IdRepositorio = filter_input(INPUT_POST, "IdRepositorio");
+            $NombreUsuario = $userData['userName'];
+            $IdUsuario = $userData['idUser'];
+            $IdFile = filter_input(INPUT_POST, "IdFile");
+            $IdGlobal = filter_input(INPUT_POST, "IdGlobal");
+            $XMLResponse = filter_input(INPUT_POST, "XMLResponse");
+            $NombreArchivo = filter_input(INPUT_POST,"NombreArchivo");
 
-        $CampoFullText = "'".$CampoFullText.$NewsNotesFields."'";  /* Se cierra la comilla simple */
-        
-        $CadenaUpdate.=", Full=$CampoFullText WHERE IdRepositorio=$IdFile";
-        
+
+
+            if(!isset($_SESSION['permissions'][md5($IdRepositorio)]['3c59dc048e8850243be8079a5c74d079']))
+                return XML::XMLReponse('Error', 0, 'Modificar Metadatos del Documento:: No tiene permiso de realizar esta acción');
+
+
+            $xml =  simplexml_load_string($XMLResponse);
+
+            /* El IdGlobal cuando se modifica el detalle desde la búsqueda */
+
+            $CadenaUpdate="UPDATE $NombreRepositorio SET ";
+            $FullText=''; /* Campo devuelto a la vista para insertarlo en la Tabla (Repositorio) */
+            $CampoFullText="";     /* Contiene el resumen de todos los campos del repositorio y de los catálogos (Para la búsqueda) */
+            $campoFullReturn='';/* Campo FullText que se retorna a la vista de usuario */
+            $arrayUpdate=array();
+
+            foreach ($xml->Detalle as $campo){
+                $type=$campo->type;
+                $value=$campo->value;
+                if(strcasecmp($campo->name,"Full")==0)
+                    continue;
+
+                if(strcasecmp($campo->name,"RutaArchivo")==0)
+                    continue;
+
+                if(strcasecmp($type,"int")==0 or strcasecmp($type,"integer")==0 or strcasecmp($type,"float")==0 or strcasecmp($type,"double")==0) /* Si detecta un tipo numerico */{
+                    if(!(is_numeric("$value")))
+                        //$CadenaUpdate.=$campo->name."=0,";
+                        $arrayUpdate[$campo->name]='0';
+                    else
+                        //$CadenaUpdate.=$campo->name."=$campo->value,";
+                        $arrayUpdate[$campo->name]=$campo->value;
+
+                }
+                else    /* Demás tipos de datos llevan ' ' */
+                    //$CadenaUpdate.=$campo->name."='".$campo->value."'".",";
+                    $arrayUpdate[$campo->name]=$campo->value;
+
+                if($campo->value!='0'){    /* Se evitan los campos por default que contengan 0 */
+                    $CampoFullText.=$value." , ";
+                    $campoFullReturn.=$value." , ";
+                }
+            }
+
+            if(count($xml->Catalogo)>0)    /* Los campos catálogo son tipo INT */
+                foreach ($xml->Catalogo as $campo){
+                    //$CadenaUpdate.=$campo->name."=$campo->value,";
+                    $arrayUpdate[$campo->name]=$campo->value;
+                    $CampoFullText.=$campo->TextoSelect." , ";
+                    $campoFullReturn.=$campo->TextoSelect." , ";
+                }
+
+            //$CadenaUpdate=trim($CadenaUpdate,',');
+
+            $CampoFullText=  trim($CampoFullText,' , ');
+
+            $campoFullReturn=  trim($campoFullReturn,' , ');
+
+
+            $notes = $Notes->getNotesArray($DataBaseName, $IdRepositorio, $IdFile);
+
+            if(!is_array($notes))
+                return XML::XMLReponse ("Error", 0, $notes);
+
+            $NewsNotesFields = '';
+            for($cont = 0; $cont < count($notes); $cont++)
+            {
+                $NewsNotesFields.= "||Nota|| ".$notes[$cont]['IdNote'].", ".$notes[$cont]['Page'].", ".$notes[$cont]['Text']." ";
+            }
+
+            $CampoFullText = "'".$CampoFullText.$NewsNotesFields."'";  /* Se cierra la comilla simple */
+
+            //$CadenaUpdate.=", Full=$CampoFullText WHERE IdRepositorio=$IdFile";
+            $arrayUpdate['Full']=$CampoFullText;
+
 //        echo $CadenaUpdate."<br><br>";
-                
-        if(($ResultUpdate = $this->db->ConsultaQuery($DataBaseName, $CadenaUpdate))==1){
-            $UpdateRepositorioGlobal='';                        
-            
-            if($IdGlobal>0)
-                $UpdateRepositorioGlobal = "UPDATE RepositorioGlobal SET Full = $CampoFullText WHERE IdGlobal = $IdGlobal";
-            else
-                $UpdateRepositorioGlobal = "UPDATE RepositorioGlobal SET Full = $CampoFullText WHERE IdFile = $IdFile AND IdRepositorio = $IdRepositorio";
-            
-            if(($ResultUpdateRepositorioGlobal = $this->db->ConsultaQuery($DataBaseName, $UpdateRepositorioGlobal))==1){                
-                $doc  = new DOMDocument('1.0','utf-8');
-                $doc->formatOutput = true;
-                $root = $doc->createElement("DetailModify");
-                $doc->appendChild($root);   
-                $estado=$doc->createElement("Estado",$ResultUpdateRepositorioGlobal);
-                $root->appendChild($estado);
-                $FullText=$doc->createElement("Full",$campoFullReturn);
-                $root->appendChild($FullText);
-                header ("Content-Type:text/xml");
-                echo $doc->saveXML();   
-                
-                Log::WriteEvent("39", $IdUsuario, $NombreUsuario, " \"$NombreArchivo\"", $DataBaseName);
-                
+
+            if(($ResultUpdate = $this->db->ConsultaQuery($DataBaseName, $CadenaUpdate))==1){
+                $UpdateRepositorioGlobal='';
+
+                if($IdGlobal>0)
+                    $UpdateRepositorioGlobal = "UPDATE RepositorioGlobal SET Full = $CampoFullText WHERE IdGlobal = $IdGlobal";
+                else
+                    $UpdateRepositorioGlobal = "UPDATE RepositorioGlobal SET Full = $CampoFullText WHERE IdFile = $IdFile AND IdRepositorio = $IdRepositorio";
+
+                if(($ResultUpdateRepositorioGlobal = $this->db->ConsultaQuery($DataBaseName, $UpdateRepositorioGlobal))==1){
+
+                    $doc=[
+                        "DetailModify"=>[
+                            "estado"=>$ResultUpdateRepositorioGlobal,
+                            "full"=>$campoFullReturn
+                        ]
+                    ];
+
+                    /*$doc  = new DOMDocument('1.0','utf-8');
+                    $doc->formatOutput = true;
+                    $root = $doc->createElement("DetailModify");
+                    $doc->appendChild($root);
+                    $estado=$doc->createElement("Estado",$ResultUpdateRepositorioGlobal);
+                    $root->appendChild($estado);
+                    $FullText=$doc->createElement("Full",$campoFullReturn);
+                    $root->appendChild($FullText);*/
+                    //header ("Content-Type:text/xml");
+                    //echo $doc->saveXML();
+
+
+                    Log::WriteEvent("39", $IdUsuario, $NombreUsuario, " \"$NombreArchivo\"", $DataBaseName);
+
 //                echo $UpdateRepositorioGlobal;
-                
+                    $reponse=["status"=>true,
+                        "message"=>"El archivo $NombreArchivo se actualizo correctamente"
+                    ];
+                    echo json_encode($reponse);
+
+                }
+                else {
+                    //return XML::XMLReponse ("Error", 0, "Error al actualizar los datos. $ResultUpdateRepositorioGlobal. <p>$UpdateRepositorioGlobal</p>");
+                    return $reponse = ["status" => false, "message" => "Error al actualizar los datos. $ResultUpdateRepositorioGlobal. <p>$UpdateRepositorioGlobal</p>"];
+                    echo json_encode($reponse);
+                }
             }
-            else
-                return XML::XMLReponse ("Error", 0, "Error al actualizar los datos. $ResultUpdateRepositorioGlobal. <p>$UpdateRepositorioGlobal</p>");
+            else {
+                //return XML::XMLReponse("Error", 0, "Error al Intentar actualar los Datos. ".$ResultUpdate);
+                $reponse = ["status" => false, "message" => "Error al Intentar actualar los Datos. "];
+                echo json_encode($reponse);
+            }
+
+        }catch (Exception $e){
+            header('HTTP/1.1 500 Internal Server Error');
+            $error = "Error al obtener Archivo ".$e->getMessage();
+            echo json_encode($reponse);
+
         }
-        else
-            return XML::XMLReponse("Error", 0, "Error al Intentar actualar los Datos. ".$ResultUpdate);
+
 
     }
     /***************************************************************************
