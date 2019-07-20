@@ -14,6 +14,7 @@
 $RoutFile = dirname(getcwd());        
 
 require_once 'DataBase.php';
+require_once 'DB.php';
 require_once 'XML.php';
 require_once 'DesignerForms.php';
 require_once 'Tree.php';
@@ -748,7 +749,7 @@ class ContentManagement {
 
             /* El IdGlobal cuando se modifica el detalle desde la búsqueda */
 
-            $CadenaUpdate="UPDATE $NombreRepositorio SET ";
+            //$CadenaUpdate="UPDATE $NombreRepositorio SET ";
             $FullText=''; /* Campo devuelto a la vista para insertarlo en la Tabla (Repositorio) */
             $CampoFullText="";     /* Contiene el resumen de todos los campos del repositorio y de los catálogos (Para la búsqueda) */
             $campoFullReturn='';/* Campo FullText que se retorna a la vista de usuario */
@@ -766,15 +767,15 @@ class ContentManagement {
                 if(strcasecmp($type,"int")==0 or strcasecmp($type,"integer")==0 or strcasecmp($type,"float")==0 or strcasecmp($type,"double")==0) /* Si detecta un tipo numerico */{
                     if(!(is_numeric("$value")))
                         //$CadenaUpdate.=$campo->name."=0,";
-                        $arrayUpdate[$campo->name]='0';
+                        $arrayUpdate["$campo->name"]='0';
                     else
                         //$CadenaUpdate.=$campo->name."=$campo->value,";
-                        $arrayUpdate[$campo->name]=$campo->value;
+                        $arrayUpdate["$campo->name"]=$campo->value;
 
                 }
                 else    /* Demás tipos de datos llevan ' ' */
                     //$CadenaUpdate.=$campo->name."='".$campo->value."'".",";
-                    $arrayUpdate[$campo->name]=$campo->value;
+                    $arrayUpdate["$campo->name"]=$campo->value;
 
                 if($campo->value!='0'){    /* Se evitan los campos por default que contengan 0 */
                     $CampoFullText.=$value." , ";
@@ -785,7 +786,7 @@ class ContentManagement {
             if(count($xml->Catalogo)>0)    /* Los campos catálogo son tipo INT */
                 foreach ($xml->Catalogo as $campo){
                     //$CadenaUpdate.=$campo->name."=$campo->value,";
-                    $arrayUpdate[$campo->name]=$campo->value;
+                    $arrayUpdate["$campo->name"]=$campo->value;
                     $CampoFullText.=$campo->TextoSelect." , ";
                     $campoFullReturn.=$campo->TextoSelect." , ";
                 }
@@ -815,15 +816,24 @@ class ContentManagement {
 
 //        echo $CadenaUpdate."<br><br>";
 
-            if(($ResultUpdate = $this->db->ConsultaQuery($DataBaseName, $CadenaUpdate))==1){
-                $UpdateRepositorioGlobal='';
+            //if(($ResultUpdate = $this->db->ConsultaQuery($DataBaseName, $CadenaUpdate))==1){
 
-                if($IdGlobal>0)
-                    $UpdateRepositorioGlobal = "UPDATE RepositorioGlobal SET Full = $CampoFullText WHERE IdGlobal = $IdGlobal";
-                else
-                    $UpdateRepositorioGlobal = "UPDATE RepositorioGlobal SET Full = $CampoFullText WHERE IdFile = $IdFile AND IdRepositorio = $IdRepositorio";
+            DB::$dbName=$DataBaseName;
+            if(DB::update($NombreRepositorio,$arrayUpdate,"IdRepositorio=%s",$IdFile)==1) {
 
-                if(($ResultUpdateRepositorioGlobal = $this->db->ConsultaQuery($DataBaseName, $UpdateRepositorioGlobal))==1){
+                $UpdateRepositorioGlobal = '';
+
+                if ($IdGlobal > 0) {
+                    //$UpdateRepositorioGlobal = "UPDATE RepositorioGlobal SET Full = $CampoFullText WHERE IdGlobal = $IdGlobal";
+                    $ResultUpdateRepositorioGlobal=DB::update('RepositorioGlobal', array('Full' => $CampoFullText), 'IdGlobal=%s', $IdGlobal);
+                } else {
+                //$UpdateRepositorioGlobal = "UPDATE RepositorioGlobal SET Full = $CampoFullText WHERE IdFile = $IdFile AND IdRepositorio = $IdRepositorio";
+                    $where=new WhereClause('and');
+                    $where->add('IdFile=%s',$IdFile);
+                    $where->add('IdRepositorio',$IdRepositorio);
+                    $ResultUpdateRepositorioGlobal=DB::update('RepositorioGlobal', array('Full' => $CampoFullText), '%l', $where);
+                }
+                if($ResultUpdateRepositorioGlobal==1){
 
                     $doc=[
                         "DetailModify"=>[
@@ -1515,6 +1525,7 @@ class ContentManagement {
         /* Valores por Default */
         
         $FechaIngreso=  date("Y-m-d");
+        $FechaHoraIngreso=date("Y-m-d H:i:s");
         /* Datos del Archivo */
         $name= $_FILES['archivo']['name'];
         $type= $_FILES['archivo']['type'];
@@ -1616,7 +1627,7 @@ class ContentManagement {
             $BodyQuery = "(IdFile, IdEmpresa, IdRepositorio, NombreEmpresa, "
             . "NombreRepositorio, IdDirectory, NombreArchivo, TipoArchivo, RutaArchivo,UsuarioPublicador, FechaIngreso, Full) "
             . "VALUES ($Metadata, $IdEmpresa, $IdRepositoio, '$NombreEmpresa', '$NombreRepositorio', $IdDirectory , '$NombreArchivo',"
-            . " '$TipoArchivo', '$PathDestino$name' , '$nombre_usuario', '$FechaIngreso', '$Full')";
+            . " '$TipoArchivo', '$PathDestino$name' , '$nombre_usuario', '$FechaHoraIngreso', '$Full')";
             
             $InsertIntoGlobal = "INSERT INTO RepositorioGlobal $BodyQuery";
                     
@@ -1631,7 +1642,7 @@ class ContentManagement {
                 $doc->appendChild($root); 
                 $XmlNombreArchivo=$doc->createElement("NombreArchivo",$NombreArchivo);
                 $root->appendChild($XmlNombreArchivo);
-                $XmlFechaIngreso=$doc->createElement("FechaIngreso",$FechaIngreso);
+                $XmlFechaIngreso=$doc->createElement("FechaIngreso",$FechaHoraIngreso);
                 $root->appendChild($XmlFechaIngreso);
                 $XmlTipoArchivo=$doc->createElement("TipoArchivo",$TipoArchivo);
                 $root->appendChild($XmlTipoArchivo);
