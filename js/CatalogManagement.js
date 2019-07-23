@@ -1,4 +1,4 @@
-/* 
+/*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
@@ -209,7 +209,7 @@ var ClassCatalogAdministrator = function ()
         var ClaveEmpresa = $('#SelectEmpresasAddCatalogo').val();
         var IdRepositorio = $('#SelectRepositoriosAddCatalogo').val();
         NombreRepositorio = $('#SelectRepositoriosAddCatalogo option:selected').html(),
-                xml_usuario = document.getElementById("InputFile_AddCatalogo"), archivo = xml_usuario.files;
+            xml_usuario = document.getElementById("InputFile_AddCatalogo"), archivo = xml_usuario.files;
 
         var data = new FormData();
 
@@ -300,6 +300,13 @@ var ClassCatalogAdministrator = function ()
                     {"sExtends": "text", "sButtonText": '<i class="fa fa-cogs fa-lg"></i> Agregar Columna', "fnClick": function () {
                             _AddNewColumnToCatalog();
                         }},
+                    {"sExtends": "text", "sButtonText": '<i class="fa fa-exclamation-triangle fa-lg"></i> Eliminar Columna', "fnClick": function () {
+                            _DeleteColum();
+                        }},
+
+                    {"sExtends": "text", "sButtonText": '<i class="fa fa-trash-o fa-lg"></i> Eliminar Catálogo', "fnClick": function () {
+                            _CM_Ctalog(RepositoryName);
+                        }},
                     {
                         "sExtends": "collection",
                         "sButtonText": '<i class="fa fa-floppy-o fa-lg"></i>',
@@ -350,11 +357,11 @@ var ClassCatalogAdministrator = function ()
     /*----------------------------------------------------------------------------
      * description: Permite la edición de las celdas de cada fila en un catálogo
      * (pulsando doble click sobre ellas y con enter para modificar)
-     * 
+     *
      * @param {type} nRow
      * @param {type} IdRepository
      * @returns {undefined}
-     * 
+     *
      ----------------------------------------------------------------------------*/
     _Jedit = function (nRow, IdRepository, repositoryName)
     {
@@ -366,56 +373,56 @@ var ClassCatalogAdministrator = function ()
                 return;
 
             $(this).editable('../php/Catalog.php',
+                {
+                    indicator: '<img src="../img/loadinfologin.gif">',
+                    tooltip: 'Click para editar...',
+                    name: "NewValue",
+                    id: "IdCatalog",
+                    "height": "22px",
+                    method: "POST",
+                    event: "dblclick",
+                    onsubmit: function (settings, Row) {
+                        row = Row;
+                    },
+                    submitdata:
+                        {
+                            opcion: "ModifyCatalogRecord",
+                            repositoryName: repositoryName,
+                            CatalogName: function () {
+                                return self.getCatalogName();
+                            },
+                            IdCatalog: function () {
+                                return $(row).parent().attr('id');
+                            },
+                            "FieldName": function ()
+                            {   /* FieldName es el campo del catalogo a modificar */
+                                var idx = CatalogTableDT.cell(row).index().column;
+                                var title = CatalogTableDT.column(idx).header();
+                                var FieldName = $(title).html();
+                                return FieldName;
+                            },
+                            "FieldType": function () {
+                                return $(cell).attr('class');
+                            }
+                        },
+                    data: function (value, settings)
                     {
-                        indicator: '<img src="../img/loadinfologin.gif">',
-                        tooltip: 'Click para editar...',
-                        name: "NewValue",
-                        id: "IdCatalog",
-                        "height": "22px",
-                        method: "POST",
-                        event: "dblclick",
-                        onsubmit: function (settings, Row) {
-                            row = Row;
-                        },
-                        submitdata:
-                                {
-                                    opcion: "ModifyCatalogRecord",
-                                    repositoryName: repositoryName,
-                                    CatalogName: function () {
-                                        return self.getCatalogName();
-                                    },
-                                    IdCatalog: function () {
-                                        return $(row).parent().attr('id');
-                                    },
-                                    "FieldName": function ()
-                                    {   /* FieldName es el campo del catalogo a modificar */
-                                        var idx = CatalogTableDT.cell(row).index().column;
-                                        var title = CatalogTableDT.column(idx).header();
-                                        var FieldName = $(title).html();
-                                        return FieldName;
-                                    },
-                                    "FieldType": function () {
-                                        return $(cell).attr('class');
-                                    }
-                                },
-                        data: function (value, settings)
-                        {
-                            /* Convert <br> to newline. */
-                            var retval = value.replace(/<br[\s\/]?>/gi, '\n');
-                            return retval;
-                        },
-                        "callback": function (xml, settings)
-                        {
-                            /* Redraw the table from the new data on the server */
+                        /* Convert <br> to newline. */
+                        var retval = value.replace(/<br[\s\/]?>/gi, '\n');
+                        return retval;
+                    },
+                    "callback": function (xml, settings)
+                    {
+                        /* Redraw the table from the new data on the server */
 //                    if($.parseXML( xml )===null){ errorMessage(xml); return 0;}else xml=$.parseXML( xml );
-                        }
-                    });
+                    }
+                });
         });
     };
 
     /*--------------------------------------------------------------------------
      * Agrega los formularios necesarios para ingresar un registro al catálogo
-     * 
+     *
      * @returns {undefined}
      ---------------------------------------------------------------------------*/
     _FormsCatalogToAddRecord = function (repositoryName)
@@ -521,7 +528,7 @@ var ClassCatalogAdministrator = function ()
 
     /* -------------------------------------------------------------------------
      * Genera un XML con los datos del nuevo registro a insertar en el catálogo
-     * 
+     *
      * @param {type} CatalogName
      * @returns {XML|String}
      ---------------------------------------------------------------------------*/
@@ -572,6 +579,25 @@ var ClassCatalogAdministrator = function ()
                         $(this).dialog('destroy');
                     }, text: "Cancelar"}}});
     };
+    //Modificando las columnas
+    _DeleteColum = function ()
+    {
+        $('#DivDeleteColumn').remove();
+        $('body').append('<div id = "DivDeleteColumn"></div>');
+        $('#DivDeleteColumn').append('<div class = "titulo_ventana"></div>');
+        $('#DivDeleteColumn').append('<label>Selecciona el campo:</label><select class="option FormStandart" style="width:60%;margin-left: 20px "></select>');
+        $('.option', {id: "SelectColumnCatalogo"});
+        _FormsDeleteColumn();
+        $('#DivDeleteColumn').dialog({title: "Eliminar columna al catalago " + self.getCatalogName(), width: 500, height: 400, minWidth: 400, minHeight: 400, modal: true,
+            buttons: {"eliminar": {click: function () {
+                        _CM_Column();
+                        $(this).dialog('destroy');
+                    }, text: "Eliminar"},
+                "Cancelar": {click: function () {
+                        $(this).dialog('destroy');
+                    }, text: "Cancelar"}}});
+    };
+
 
     _AddFormsNewColumn = function ()
     {
@@ -648,6 +674,186 @@ var ClassCatalogAdministrator = function ()
         $('#CatalogFieldLength').tooltip();
 
     };
+    //Formulario para seleccionar la columna a eliminar
+    _FormsDeleteColumn = function () {
+
+        var RepositoryName = $('#SelectRepositoriosAddCatalogo option:selected').html();
+        var CatalogName = self.getCatalogName();
+        var CatalogStructure = GeStructure(RepositoryName + '_' + CatalogName);
+        console.log(CatalogStructure);
+
+        $(CatalogStructure).find('Campo').each(function ()
+        {
+            var name = $(this).find("name").text();
+            var option = $('<option>', {value: name}).append(name);
+            if (option.val().length!==0)
+            {
+                $('.option').append(option);
+            }else
+            {
+                $('.option').append('<option style="display: none">Esperando la columna...</option>');
+            }
+
+        });
+    }
+    //Confirmar Eliminacion de columnas
+    _CM_Column = function ()
+    {
+        var selectColumn = $('.option').val();
+        var FieldName = self.getCatalogName();
+        BootstrapDialog.show({
+            title: '<i class="fa fa-trash-o fa-lg"></i> Eliminar Catálago',
+            message: '<p>La columna  <b>' + selectColumn + '</b> será eliminado del catálogo <b>' + FieldName +  '</b> ¿Desea Continuar?</p>',
+            closable: true,
+            closeByBackdrop: true,
+            closeByKeyboard: true,
+            size: BootstrapDialog.SIZE_SMALL,
+            type: BootstrapDialog.TYPE_DANGER,
+            buttons: [
+                {
+                    hotkey: 13,
+                    icon: "fa fa-trash fa-lg",
+                    label: 'Eliminar',
+                    cssClass: "btn-danger",
+                    action: function (dialogRef) {
+                        var button = this;
+                        button.spin();
+                        dialogRef.enableButtons(false);
+                        dialogRef.setClosable(false);
+
+                        D_Column()
+                        dialogRef.close();
+                        button.stopSpin();
+                    }
+                },
+                {
+                    label: 'Cancelar',
+                    action: function(dialogRef){
+                        dialogRef.close();
+                    }
+                }
+            ],
+            onshown: function(dialogRef){
+
+            }
+        });
+    }
+    //Confirmar eliminacion del catalogo
+    var _CM_Ctalog = function(){
+        var FieldName = self.getCatalogName();
+
+        BootstrapDialog.show({
+            title: '<i class="fa fa-trash-o fa-lg"></i> Eliminar Catálago',
+            message: '<p>El catálogo <b>' + FieldName + '</b> será eliminado permanentemente de la base de datos. ¿Desea Continuar?</p>',
+            closable: true,
+            closeByBackdrop: true,
+            closeByKeyboard: true,
+            size: BootstrapDialog.SIZE_SMALL,
+            type: BootstrapDialog.TYPE_DANGER,
+            buttons: [
+                {
+                    hotkey: 13,
+                    icon: "fa fa-trash fa-lg",
+                    label: 'Eliminar',
+                    cssClass: "btn-danger",
+                    action: function (dialogRef) {
+                        var button = this;
+                        button.spin();
+                        dialogRef.enableButtons(false);
+                        dialogRef.setClosable(false);
+
+                        D_Catalog()
+                        dialogRef.close();
+                        button.stopSpin();
+                    }
+                },
+                {
+                    label: 'Cancelar',
+                    action: function(dialogRef){
+                        dialogRef.close();
+                    }
+                }
+            ],
+            onshown: function(dialogRef){
+
+            }
+        });
+    }
+    //Enviar y recibir datos al backend para eliminar el catalogo
+    D_Column = function()
+    {
+        var FieldName = self.getCatalogName();
+        var RepositoryName = $('#SelectRepositoriosAddCatalogo option:selected').html();
+        var selectColumn = $('.option').val();
+        //var selectId = "#"+selectColumn;
+        //var RequiredField = $('#CatalogRequiredField').val();
+        var DataBaseName = EnvironmentData.DataBaseName;
+
+        $.ajax({
+            async: true,
+            cache: false,
+            dataType: "json",
+            type: 'POST',
+            url: "php/Catalog.php",
+            data: {
+                opcion: "D_Column",
+                NameCatalog: FieldName,
+                RepositoryName: RepositoryName,
+                dataBaseName: DataBaseName,
+                NameColumn: selectColumn
+            },
+            success:  function(response)
+            {
+                if (response.status == true) {
+                    Notificacion(response.message);
+                } else {
+                    errorMessage(response.message);
+                }
+            },
+            beforeSend:function(){},
+            error: function(jqXHR, textStatus, errorThrown){
+                errorMessage(textStatus +"<br>"+ errorThrown);
+            }
+        });
+    }
+    //Enviar y recibir datos del backend para eliminar el catalogo
+    var D_Catalog = function ()
+    {
+        var FieldName = self.getCatalogName();
+        var RepositoryName = $('#SelectRepositoriosAddCatalogo option:selected').html();
+        //var IdRepository = $('#SelectRepositoriosAddCatalogo option:selected').val();
+        var DataBaseName = EnvironmentData.DataBaseName;
+
+
+        $.ajax({
+            async: true,
+            cache: false,
+            dataType: "json",
+            type: 'POST',
+            url: "php/Catalog.php",
+            data: {
+                opcion: "D_Catalog",
+                NameCatalog: FieldName,
+                RepositoryName: RepositoryName,
+                dataBaseName: DataBaseName
+
+            },
+            success:  function(response)
+            {
+                if (response.status) {
+                    $('#CatalogsAdminTable').remove();
+                    Notificacion(response.message);
+                } else {
+                    errorMessage(response.message);
+                }
+            },
+            beforeSend:function(){},
+            error: function(jqXHR, textStatus, errorThrown){
+                errorMessage(textStatus +"<br>"+ errorThrown);
+            }
+        });
+
+    }
 
     _ReplaceInvalidCharacters = function (RegularExpresion, Form)
     {
@@ -833,7 +1039,7 @@ var ClassCatalogAdministrator = function ()
     };
 
     /*--------------------------------------------------------------------------
-     * 
+     *
      * @param {type} IdRepositorio
      * @param {type} IdCatalogOption
      * @returns {undefined}
@@ -1253,7 +1459,7 @@ ClassCatalogAdministrator.prototype.ViewCatalog = function ()
     var formGroup = $('<div>', {class: "form-group"});
     var enterpriseLabel = $('<label>', {}).append('Empresa');
     var enterpriseSelect = $('<select>', {class: "form-control", id: "SelectEmpresasAddCatalogo"})
-            .append($('<option>', {value: 0}).append('Seleccione una Empresa...'));
+        .append($('<option>', {value: 0}).append('Seleccione una Empresa...'));
 
     formGroup.append(enterpriseLabel).append(enterpriseSelect);
     content.append(formGroup);
@@ -1268,7 +1474,7 @@ ClassCatalogAdministrator.prototype.ViewCatalog = function ()
     formGroup = $('<div>', {class: "form-group"});
     var catalogLabel = $('<label>', {}).append('Catálogo');
     var catalogSelect = $('<select>', {class: "form-control", id: "SelectCatalogosAddOption"})
-            .append($('<option>').append('Seleccione una Empresa...'));
+        .append($('<option>').append('Seleccione una Empresa...'));
 
     formGroup.append(catalogLabel).append(catalogSelect);
     content.append(formGroup);
